@@ -47,12 +47,21 @@ enum TaskPriority {
   HIGH
 }
 
+enum InboxStatus {
+  UNREVIEWED
+  QUALIFIED
+  REJECTED
+  CRM_CREATED
+}
+
 model Workspace {
   id String @id @default(uuid()) @db.Uuid
   name String
   slug String @unique
   members WorkspaceMember[]
   leads Lead[]
+  searchSessions SearchSession[]
+  discoveredBusinesses DiscoveredBusiness[]
   createdAt DateTime @default(now())
 }
 
@@ -106,6 +115,8 @@ model Lead {
   ownerUserId String? @db.Uuid
   owner User? @relation("LeadOwner", fields: [ownerUserId], references: [id])
   notes String?
+  sourceType String?
+  sourceExternalId String?
   dealValue Decimal? @db.Decimal(14, 2)
   activities Activity[]
   tasks Task[]
@@ -114,6 +125,39 @@ model Lead {
   archivedAt DateTime?
   @@index([workspaceId, stage, archivedAt])
   @@index([workspaceId, businessNameNormalized])
+}
+
+model SearchSession {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider String
+  query String
+  location String
+  industry String
+  resultCount Int
+  resultPlaceIds String[]
+  createdAt DateTime @default(now())
+  discoveredBusinesses DiscoveredBusiness[]
+  @@index([workspaceId, createdAt])
+}
+
+model DiscoveredBusiness {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider String
+  externalId String
+  industry String
+  location String
+  status InboxStatus @default(UNREVIEWED)
+  searchSessionId String @db.Uuid
+  searchSession SearchSession @relation(fields: [searchSessionId], references: [id])
+  crmLeadId String? @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([provider, externalId])
+  @@index([workspaceId, status, createdAt])
 }
 
 model Activity {

@@ -41,3 +41,9 @@ npm run build
 Khi thay đổi schema ở môi trường phát triển, tạo migration mới bằng `npx prisma migrate dev --name <ten-migration>`. Trên bản clone hoặc môi trường triển khai, dùng `npx prisma migrate deploy`.
 
 Ứng dụng hiện chỉ dành cho một workspace admin. Trước khi đưa lên Internet cần HTTPS, giới hạn thử đăng nhập, dọn session hết hạn, sao lưu DB và quản lý bí mật an toàn.
+
+## Google Places Discovery
+
+Để dùng `/discover`, tạo Google Cloud project, bật **Places API (New)**, cấu hình billing và tạo API key giới hạn cho Places API (New). Thêm `GOOGLE_MAPS_API_KEY` vào `.env` cục bộ; không đưa key vào Git. Khởi động lại `npm run dev` sau khi sửa `.env`. Không có key, trang hiển thị thông báo cấu hình thay vì gọi Google.
+
+Mỗi lượt tìm chỉ lấy place ID, tên, địa chỉ và loại hình. Search session lưu place ID; Lead Inbox lấy nội dung Google khi hiển thị và yêu cầu xác nhận thông tin trước khi tạo CRM lead. Không lưu payload Places đầy đủ trong database. Google có thể tính phí theo số request và field mask.

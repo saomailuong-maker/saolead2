@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+}
+enum Stage {
+  NEW
+  QUALIFIED
+  CONTACTED
+  REPLIED
+  INTERESTED
+  AUDIT_SENT
+  DEMO_SENT
+  QUOTATION
+  NEGOTIATION
+  WON
+  LOST
+}
+enum ActivityType {
+  NOTE
+  CALL
+  ZALO
+  FACEBOOK
+  EMAIL
+  MEETING
+  AUDIT_SENT
+  DEMO_SENT
+  PROPOSAL_SENT
+  STATUS_CHANGED
+  TASK_COMPLETED
+}
+enum TaskStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model Workspace {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  slug String @unique
+  members WorkspaceMember[]
+  leads Lead[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  name String
+  passwordHash String
+  sessions Session[]
+  memberships WorkspaceMember[]
+  ownedLeads Lead[] @relation("LeadOwner")
+  activities Activity[]
+  tasks Task[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkspaceMember {
+  workspaceId String @db.Uuid
+  userId String @db.Uuid
+  role Role @default(ADMIN)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([workspaceId, userId])
+}
+
+model Session {
+  id String @id @default(uuid()) @db.Uuid
+  tokenHash String @unique
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Lead {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  businessName String
+  businessNameNormalized String
+  industry String?
+  locationText String?
+  websiteUrl String?
+  phone String?
+  email String?
+  facebookUrl String?
+  instagramUrl String?
+  zaloUrl String?
+  stage Stage @default(NEW)
+  ownerUserId String? @db.Uuid
+  owner User? @relation("LeadOwner", fields: [ownerUserId], references: [id])
+  notes String?
+  dealValue Decimal? @db.Decimal(14, 2)
+  activities Activity[]
+  tasks Task[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  archivedAt DateTime?
+  @@index([workspaceId, stage, archivedAt])
+  @@index([workspaceId, businessNameNormalized])
+}
+
+model Activity {
+  id String @id @default(uuid()) @db.Uuid
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  type ActivityType
+  summary String
+  metadata Json?
+  occurredAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@index([leadId, occurredAt])
+}
+
+model Task {
+  id String @id @default(uuid()) @db.Uuid
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  title String
+  dueAt DateTime
+  priority TaskPriority @default(MEDIUM)
+  status TaskStatus @default(OPEN)
+  assignedToId String @db.Uuid
+  assignedTo User @relation(fields: [assignedToId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([assignedToId, status, dueAt])
+}

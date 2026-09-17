@@ -1,0 +1,3 @@
+export const stages = ["NEW", "QUALIFIED", "CONTACTED", "REPLIED", "INTERESTED", "AUDIT_SENT", "DEMO_SENT", "QUOTATION", "NEGOTIATION", "WON", "LOST"] as const;
+export const stageLabel: Record<string, string> = { NEW: "Mới", QUALIFIED: "Đã lọc", CONTACTED: "Đã liên hệ", REPLIED: "Đã phản hồi", INTERESTED: "Quan tâm", AUDIT_SENT: "Đã gửi audit", DEMO_SENT: "Đã gửi demo", QUOTATION: "Báo giá", NEGOTIATION: "Đàm phán", WON: "Thành công", LOST: "Thất bại" };
+export function normalizeName(value: string) { return value.trim().toLocaleLowerCase("vi").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/\s+/g, " "); }

@@ -59,3 +59,5 @@ RapidAPI Text Search chỉ lấy place ID, tên và địa chỉ. Khi người d
 ## Website Audit
 
 Lead Detail có mục **Website Audit** để quét HTML của trang chủ hiện tại và lưu lịch sử kết quả. Audit thu thập thông tin HTTP, SEO cơ bản, tín hiệu liên hệ/chuyển đổi, cấu trúc liên kết và tạo findings theo quy tắc cố định. URL được kiểm tra DNS và chặn địa chỉ nội bộ trước mỗi request và redirect; mỗi scan giới hạn 5 redirect, khoảng 10 giây và 2 MB HTML.
+
+Ngay dưới kết quả audit, **Cơ hội đề xuất** chuyển Lead và bằng chứng từ lần quét gần nhất thành một danh sách ngắn các cơ hội bán hàng theo quy tắc cố định. Mỗi cơ hội hiển thị lý do, dịch vụ gợi ý và mã bằng chứng; chưa có điểm số hoặc nội dung AI.

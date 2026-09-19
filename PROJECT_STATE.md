@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-19
 Branch: main
-Last commit: feat: add website audit MVP (local, not pushed)
+Last commit: feat: add deterministic opportunity engine (local, not pushed)
 
 ## Current Phase
-Phase 2 — Discovery and Website Audit. Task C complete.
+Phase 2 — Discovery, Website Audit and Opportunity Engine. Task D complete.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -29,9 +29,10 @@ Phase 2 — Discovery and Website Audit. Task C complete.
 - CRM creation copies enriched phone and website; Direct Google details is disabled while RapidAPI transport is active.
 - Lead Detail can run and persist a server-side homepage Website Audit with HTTP, SEO, contact/conversion and structure evidence.
 - Website Audit rejects private/reserved targets and revalidates every redirect.
+- Lead Detail computes a concise, deterministic opportunity list and contact summary from CRM data plus the latest successful audit.
 
 ## Not Implemented
-- Opportunity rules, scoring, AI and public audit reports.
+- Numeric scoring, AI and public audit reports.
 
 ## Known Issues
 - RapidAPI Basic plan has a hard limit of 100 requests/day.
@@ -44,12 +45,13 @@ Phase 2 — Discovery and Website Audit. Task C complete.
 - Task B.2: RapidAPI Text Search live verified.
 - Task B.3: migration applied; typecheck PASS; lint PASS; tests PASS (28); build PASS; diff check PASS. Live Đà Lạt → Homestay → Inbox enrichment → CRM phone/website autofill PASS.
 - Task C: migration applied; typecheck PASS; lint PASS; tests PASS (54); build PASS; migration status PASS; diff check PASS. Public website scan persisted/redisplayed and private-target rejection manually verified.
+- Task D: no migration; typecheck PASS; lint PASS; tests PASS (62); build PASS; diff check PASS. Lead with audit and lead without website manually verified.
 
 ## Last Completed Task
-Task C — Website Audit MVP.
+Task D — Deterministic Opportunity Engine.
 
 ## Current Task
-Task C complete; deterministic homepage audit is available on Lead Detail.
+Task D complete; evidence-backed opportunities and contact reasons are available on Lead Detail.
 
 ## Next Task
 Await the next explicitly assigned task.
@@ -59,5 +61,7 @@ Await the next explicitly assigned task.
 - Required RapidAPI variables: `PLACES_TRANSPORT`, `RAPIDAPI_KEY`, `RAPIDAPI_HOST` (local `.env` only).
 - Google place ID remains the canonical provider identity; only selected enrichment fields are persisted.
 - Task B.3 commit `f6980d5` is pushed to GitHub; RapidAPI Text Search, Place Details, Inbox enrichment and CRM autofill are live verified.
+- Task C commit `458a397` is pushed to GitHub and Website Audit is live verified.
 - Website Audit stores concise checks/findings and never stores full HTML.
+- Opportunities are computed dynamically; Task D adds no persistence or numeric score.
 - No automated outreach or phase 3+ features.

@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-19
 Branch: main
-Last commit: feat: enrich Lead Inbox with RapidAPI Place Details (local, not pushed)
+Last commit: feat: add website audit MVP (local, not pushed)
 
 ## Current Phase
-Phase 2 — Discovery. Task B.3 complete.
+Phase 2 — Discovery and Website Audit. Task C complete.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -27,25 +27,29 @@ Phase 2 — Discovery. Task B.3 complete.
 - RapidAPI Place Details enriches only businesses selected into Lead Inbox.
 - Lead Inbox persists and displays phone, website, rating, review count, opening hours and enrichment status.
 - CRM creation copies enriched phone and website; Direct Google details is disabled while RapidAPI transport is active.
+- Lead Detail can run and persist a server-side homepage Website Audit with HTTP, SEO, contact/conversion and structure evidence.
+- Website Audit rejects private/reserved targets and revalidates every redirect.
 
 ## Not Implemented
-- Website audit, scoring, AI and public audit reports.
+- Opportunity rules, scoring, AI and public audit reports.
 
 ## Known Issues
 - RapidAPI Basic plan has a hard limit of 100 requests/day.
-- Email is not supplied by Places and remains manual until Website Audit enrichment.
+- Email remains manual; Task C does not perform email enrichment.
+- Website Audit only evaluates returned homepage HTML; JavaScript-rendered content and other pages are not scanned.
 
 ## Verification
 - Task A.1: typecheck PASS; lint PASS; tests PASS (2); build PASS; seed PASS; migration status PASS.
 - Task B: migration applied; typecheck PASS; lint PASS; tests PASS (13, mocked Google); build PASS. Live Google flow PENDING.
 - Task B.2: RapidAPI Text Search live verified.
 - Task B.3: migration applied; typecheck PASS; lint PASS; tests PASS (28); build PASS; diff check PASS. Live Đà Lạt → Homestay → Inbox enrichment → CRM phone/website autofill PASS.
+- Task C: migration applied; typecheck PASS; lint PASS; tests PASS (54); build PASS; migration status PASS; diff check PASS. Public website scan persisted/redisplayed and private-target rejection manually verified.
 
 ## Last Completed Task
-Task B.3 — RapidAPI Place Details enrichment and CRM phone/website autofill.
+Task C — Website Audit MVP.
 
 ## Current Task
-Task B.3 complete; RapidAPI controls Text Search and Place Details.
+Task C complete; deterministic homepage audit is available on Lead Detail.
 
 ## Next Task
 Await the next explicitly assigned task.
@@ -54,4 +58,6 @@ Await the next explicitly assigned task.
 - Google API key remains server-only.
 - Required RapidAPI variables: `PLACES_TRANSPORT`, `RAPIDAPI_KEY`, `RAPIDAPI_HOST` (local `.env` only).
 - Google place ID remains the canonical provider identity; only selected enrichment fields are persisted.
+- Task B.3 commit `f6980d5` is pushed to GitHub; RapidAPI Text Search, Place Details, Inbox enrichment and CRM autofill are live verified.
+- Website Audit stores concise checks/findings and never stores full HTML.
 - No automated outreach or phase 3+ features.

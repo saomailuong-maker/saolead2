@@ -60,6 +60,12 @@ enum DetailsStatus {
   FAILED
 }
 
+enum WebsiteScanStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 model Workspace {
   id String @id @default(uuid()) @db.Uuid
   name String
@@ -68,6 +74,7 @@ model Workspace {
   leads Lead[]
   searchSessions SearchSession[]
   discoveredBusinesses DiscoveredBusiness[]
+  websiteScans WebsiteScan[]
   createdAt DateTime @default(now())
 }
 
@@ -83,6 +90,28 @@ model User {
   tasks Task[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model WebsiteScan {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  requestedUrl String
+  finalUrl String?
+  status WebsiteScanStatus @default(PENDING)
+  httpStatus Int?
+  durationMs Int?
+  redirectCount Int?
+  checks Json?
+  findings Json?
+  errorCode String?
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([leadId, createdAt])
+  @@index([workspaceId, createdAt])
 }
 
 model WorkspaceMember {
@@ -126,6 +155,7 @@ model Lead {
   dealValue Decimal? @db.Decimal(14, 2)
   activities Activity[]
   tasks Task[]
+  websiteScans WebsiteScan[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   archivedAt DateTime?

@@ -44,6 +44,14 @@ Khi thay đổi schema ở môi trường phát triển, tạo migration mới b
 
 ## Google Places Discovery
 
-Để dùng `/discover`, tạo Google Cloud project, bật **Places API (New)**, cấu hình billing và tạo API key giới hạn cho Places API (New). Thêm `GOOGLE_MAPS_API_KEY` vào `.env` cục bộ; không đưa key vào Git. Khởi động lại `npm run dev` sau khi sửa `.env`. Không có key, trang hiển thị thông báo cấu hình thay vì gọi Google.
+Transport hiện tại là RapidAPI Google Map Places (New V2). Cấu hình `.env` cục bộ và khởi động lại `npm run dev`:
 
-Mỗi lượt tìm chỉ lấy place ID, tên, địa chỉ và loại hình. Search session lưu place ID; Lead Inbox lấy nội dung Google khi hiển thị và yêu cầu xác nhận thông tin trước khi tạo CRM lead. Không lưu payload Places đầy đủ trong database. Google có thể tính phí theo số request và field mask.
+```env
+PLACES_TRANSPORT="rapidapi"
+RAPIDAPI_KEY="YOUR_KEY"
+RAPIDAPI_HOST="google-map-places-new-v2.p.rapidapi.com"
+```
+
+Không đưa key vào Git. Basic plan có giới hạn cứng 100 request/ngày; mỗi lần bấm tìm tạo đúng một request và tối đa 20 kết quả. Direct Google adapter vẫn được giữ làm fallback bằng `PLACES_TRANSPORT="direct-google"` cùng `GOOGLE_MAPS_API_KEY`.
+
+RapidAPI Text Search chỉ lấy place ID, tên và địa chỉ. Search session lưu place ID; Lead Inbox yêu cầu xác nhận thông tin trước khi tạo CRM lead. Không lưu payload Places đầy đủ trong database.

@@ -7,7 +7,7 @@ export const searchInputSchema = z.object({
   location: z.enum(locations),
   industry: z.enum(industries),
   keyword: z.string().trim().max(80).regex(/^[\p{L}\p{N}\s.,/-]*$/u).default(""),
-  maxResults: z.coerce.number().refine((n) => [10, 20, 40].includes(n)),
+  maxResults: z.coerce.number().refine((n) => [10, 20].includes(n)),
 });
 
 export type SearchBusinessesInput = z.infer<typeof searchInputSchema>;

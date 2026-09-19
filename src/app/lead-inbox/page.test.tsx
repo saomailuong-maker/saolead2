@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("../../lib/auth", () => ({ requireActor: async () => ({ workspaceId: "workspace-1" }) }));
 vi.mock("../../lib/db", () => ({ db: { discoveredBusiness: { count: async () => 1, findMany: async () => [{ id: "inbox-1", externalId: "ChIJabc123", industry: "Homestay", location: "Đà Lạt", status: "QUALIFIED", createdAt: new Date("2026-09-17"), crmLeadId: null }] } } }));
-vi.mock("../../features/discovery/provider", () => ({ GooglePlacesDiscoveryProvider: class { async getPlace() { return { name: "Mây Homestay", address: "Đà Lạt" }; } } }));
+vi.mock("../../features/discovery/provider", () => ({ PlacesService: class { async getPlace() { return { name: "Mây Homestay", address: "Đà Lạt" }; } } }));
 vi.mock("../../features/discovery/actions", () => ({ createCrmLeadFromInbox: async () => undefined, setInboxStatus: async () => undefined }));
 
 import LeadInbox from "./page";

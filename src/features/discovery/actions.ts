@@ -7,7 +7,7 @@ import { z } from "zod";
 import { requireActor } from "../../lib/auth";
 import { db } from "../../lib/db";
 import { normalizeName } from "../../lib/lead";
-import { GooglePlacesDiscoveryProvider, MissingGoogleKeyError, type BusinessSearchResult } from "./provider";
+import { PlacesConfigError, PlacesService, PlacesTransportError, type BusinessSearchResult } from "./provider";
 import { buildTextQuery, searchInputSchema } from "./query";
 import { canAddToInbox } from "./inbox";
 
@@ -19,16 +19,17 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
   const parsed = searchInputSchema.safeParse({ location: field(form, "location"), industry: field(form, "industry"), keyword: field(form, "keyword"), maxResults: field(form, "maxResults") });
   if (!parsed.success) return { results: [], error: "input" };
   try {
-    const provider = new GooglePlacesDiscoveryProvider();
+    const provider = new PlacesService();
     const results = await provider.search(parsed.data);
     const session = await db.searchSession.create({ data: { workspaceId: actor.workspaceId, provider: "google_places", query: buildTextQuery(parsed.data), location: parsed.data.location, industry: parsed.data.industry, resultCount: results.length, resultPlaceIds: results.map((r) => r.externalId) } });
     const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: results.map((r) => r.externalId) } }, select: { externalId: true } });
     const seen = new Set(existing.map((r) => r.externalId));
-    console.info(JSON.stringify({ event: "provider_request", provider: "google_places", operation: "text_search", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
+    console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
     return { sessionId: session.id, results: results.map((r) => ({ ...r, inInbox: seen.has(r.externalId) })) };
   } catch (error) {
-    console.error(JSON.stringify({ event: "provider_request", provider: "google_places", operation: "text_search", workspace_id: actor.workspaceId, status: "error", error: error instanceof Error ? error.name : "unknown" }));
-    return { results: [], error: error instanceof MissingGoogleKeyError ? "key" : "provider" };
+    const detail = error instanceof PlacesTransportError ? { transport: error.transport, operation: error.operation, http_status: error.httpStatus, provider_code: error.providerCode, provider_message: error.providerMessage, duration_ms: error.durationMs } : { transport: error instanceof PlacesConfigError ? error.transport : "unknown", operation: "text_search", http_status: null, provider_code: error instanceof PlacesConfigError ? "CONFIG_ERROR" : "UNKNOWN", provider_message: error instanceof Error ? error.message : null, duration_ms: null };
+    console.error(JSON.stringify({ event: "provider_request", provider: "google_places", workspace_id: actor.workspaceId, status: "error", ...detail }));
+    return { results: [], error: error instanceof PlacesConfigError ? "key" : "provider" };
   }
 }
 

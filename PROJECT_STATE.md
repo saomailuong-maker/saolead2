@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-19
 Branch: main
-Last commit: `d32d6c6 feat: add evidence-based sales assistant` (pushed)
+Last commit: `a1e1222 feat: add public audit reports with view tracking` (pushed)
 
 ## Current Phase
-Phase 3 — Public Audit Report. Task G code complete; manual report acceptance pending.
+Phase 3 — Personalized Demo Generator. Task H2 visual upgrade is awaiting manual acceptance.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -41,9 +41,13 @@ Phase 3 — Public Audit Report. Task G code complete; manual report acceptance 
 - Sales drafts use OpenAI Responses API structured output, deterministic claim checks, workspace-scoped persistence, edit/copy/save controls and local objection responses with no auto-send.
 - Lead Detail can intentionally create immutable, sanitized public report snapshots for social-only leads or successful website audits.
 - Opaque `/r/[token]` links render without login, carry noindex/no-store controls, support revoke/expiry and conservatively count browser opens with 30-minute cookie dedupe.
+- Task G was manually accepted, committed as `a1e1222` and pushed to `main`.
+- Lead Detail can manually create structured demo briefs and deterministic ONE_PAGE, OPTIMIZATION_MOCKUP or BOOKING_FLOW mockups, then edit, preview, publish and archive them.
+- Published `/demo/[publicSlug]` pages are public, noindex/no-store, use conservative view tracking and link to an active public report when available.
+- Task H2 upgrades the report/demo visual hierarchy and adds manually triggered, persisted OpenAI concept visuals with truthful prompts and graceful failure handling.
 
 ## Not Implemented
-- Demo generation, proposals and automated outreach.
+- Proposals and automated outreach.
 
 ## Known Issues
 - RapidAPI Basic plan has a hard limit of 100 requests/day.
@@ -61,16 +65,18 @@ Phase 3 — Public Audit Report. Task G code complete; manual report acceptance 
 - Task B4: no migration; typecheck PASS; lint PASS; tests PASS (104); build PASS; diff check PASS. Manual geo/F5 acceptance PENDING.
 - Task B4.1: minimal ProviderRequestLog migration applied; typecheck PASS; lint PASS; tests PASS (113); build PASS; migration status PASS; diff check PASS. Commit `d0a3eed` pushed and manually verified; Places HTTP 200, quota visible and `/system-status` working.
 - Task F: OutreachDraft migration applied; messaging-quality patch adds three styles and Zalo/Facebook, phone and email outputs; typecheck PASS; lint PASS; tests PASS (138); build PASS; migration status PASS; diff check PASS. Commit `d32d6c6` pushed.
-- Task G: PublicAuditReport/View migration applied; typecheck PASS; lint PASS; tests PASS (154); build PASS; migration status PASS; diff check PASS. Manual acceptance PENDING.
+- Task G: PublicAuditReport/View migration applied; typecheck PASS; lint PASS; tests PASS (154); build PASS; migration status PASS; diff check PASS. Manually accepted and pushed as `a1e1222`.
+- Task H: LeadDemo/View migration applied; typecheck PASS; lint PASS; tests PASS (166); build PASS; migration status PASS; diff check PASS. Manual acceptance PENDING; not committed.
+- Task H2: concept visual fields migration applied; visual report/demo upgrade and mocked Image API coverage added. Manual acceptance PENDING; not committed.
 
 ## Last Completed Task
-Task F — Evidence-based Sales Assistant (`d32d6c6`, pushed).
+Task G — Public Audit Report + View Tracking (`a1e1222`, pushed).
 
 ## Current Task
-Task G code complete. Public report manual acceptance remains required before commit.
+Task H2 code complete. Visual demo and concept generation manual acceptance remain required before commit.
 
 ## Next Task
-Await the next explicitly assigned task.
+Manual acceptance for Task H2. Do not start another task.
 
 ## Important Decisions
 - Google API key remains server-only.
@@ -88,4 +94,6 @@ Await the next explicitly assigned task.
 - Sales Assistant sends only compact verified context, stores no hidden prompt or secret, and never sends outreach automatically.
 - Customer-facing drafts reject internal labels/provider language, limit first-contact questions and keep detailed discovery questions for after a prospect replies.
 - Public reports are immutable sanitized snapshots; public page views never read mutable Lead/CRM data and report creation/view never calls OpenAI.
-- No automated outreach or phase 3+ features.
+- Demo rendering uses structured JSON and fixed React components; public preview/open makes zero AI calls.
+- Concept generation is manual, uses one Images API request per click and stores only prompt metadata plus a local generated-file reference; images are explicitly labeled illustrative.
+- No automated outreach, proposals or production website deployment.

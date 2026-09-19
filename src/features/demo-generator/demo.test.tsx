@@ -1,0 +1,20 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it } from "vitest";
+import { buildDemoBrief, buildDemoContent, decideDemo, type DemoLead } from "./brief";
+import { DemoRenderer } from "./render";
+import type { OpportunityResult } from "../opportunities/types";
+import type { PriorityScoreResult } from "../priority-score/types";
+import type { SalesStrategy } from "../sales-assistant/types";
+const lead: DemoLead={id:"00000000-0000-4000-8000-000000000001",businessName:"Nhà Mây",industry:"Homestay",locationText:"Đà Lạt",websiteUrl:"https://facebook.com/nhamay",phone:"0912345678",zaloUrl:null,facebookUrl:"https://facebook.com/nhamay"};
+const opportunities:OpportunityResult={opportunities:[{type:"NO_WEBSITE",severity:"HIGH",title:"Chưa có website",reason:"Chưa có website riêng",suggestedService:"Website",evidenceCodes:["NO_STANDALONE_WEBSITE"],evidence:["CRM chưa ghi nhận website riêng."]}],contactReasons:[],auditLimited:false};
+const priority=(band:PriorityScoreResult["band"]):PriorityScoreResult=>({total:band==="LOW"?10:60,band,contactability:10,opportunity:30,readiness:20,reasons:[],opportunityIncomplete:false});
+const strategy=(recommendation:SalesStrategy["recommendation"]):SalesStrategy=>({recommendation,confidence:"HIGH",primaryAngle:"",supportingEvidence:[],risks:[],discoveryQuestions:[],allowedClaims:[],prohibitedClaims:[]});
+describe("personalized demo",()=>{
+ it("chooses ONE_PAGE for social-only lodging",()=>expect(decideDemo({lead,opportunityResult:opportunities,priority:priority("WARM"),strategy:strategy("WEBSITE_OPPORTUNITY")}).type).toBe("ONE_PAGE"));
+ it("chooses OPTIMIZATION_MOCKUP for an existing website with CTA issues",()=>{const existing={...lead,websiteUrl:"https://nhamay.vn"};const result={...opportunities,opportunities:[{...opportunities.opportunities[0],type:"CLICK_TO_CALL" as const}]};expect(decideDemo({lead:existing,opportunityResult:result,priority:priority("WARM"),strategy:strategy("OPTIMIZE_EXISTING")}).type).toBe("OPTIMIZATION_MOCKUP")});
+ it("returns NONE for LOW priority",()=>expect(decideDemo({lead,opportunityResult:opportunities,priority:priority("LOW"),strategy:strategy("WEBSITE_OPPORTUNITY")}).type).toBe("NONE"));
+ it("chooses BOOKING_FLOW only after booking need is confirmed",()=>expect(decideDemo({lead,opportunityResult:opportunities,priority:priority("HOT"),strategy:strategy("WEBSITE_OPPORTUNITY"),confirmedBookingNeed:true}).type).toBe("BOOKING_FLOW"));
+ it("renders structured safe content, presets and explicit CTAs",()=>{const brief=buildDemoBrief(lead,"ONE_PAGE",opportunities);const content=buildDemoContent(brief);const warm=renderToStaticMarkup(<DemoRenderer brief={brief} content={content} preset="WARM_HOSPITALITY"/>);const dark=renderToStaticMarkup(<DemoRenderer brief={brief} content={content} preset="PREMIUM_DARK"/>);expect(warm).toContain('data-preset="WARM_HOSPITALITY"');expect(dark).toContain('data-preset="PREMIUM_DARK"');expect(warm).toContain("Nhà Mây");expect(warm).toContain("Nội dung có thể điều chỉnh");expect(warm).toContain("Không gian, dịch vụ và trải nghiệm");expect(warm).toContain("data-mobile-sticky-cta");expect(warm).not.toContain("CRM");expect(JSON.stringify({brief,content})).not.toMatch(/API_KEY|provider|notes/i)});
+ it("marks a persisted concept image as illustrative",()=>{const brief=buildDemoBrief(lead,"ONE_PAGE",opportunities);const html=renderToStaticMarkup(<DemoRenderer brief={brief} content={buildDemoContent(brief)} preset="WARM_HOSPITALITY" conceptImagePath="/generated/demo-concepts/example.webp"/>);expect(html).toContain("example.webp");expect(html).toContain("Hình minh họa concept")});
+ it("does not invent prices, amenities or availability",()=>{const json=JSON.stringify(buildDemoContent(buildDemoBrief(lead,"BOOKING_FLOW",opportunities)));expect(json).not.toMatch(/₫|triệu|wifi|hồ bơi|còn phòng/i);expect(json).toContain("không phải tồn phòng thực tế")});
+});

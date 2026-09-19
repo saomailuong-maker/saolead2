@@ -72,6 +72,12 @@ enum PublicReportStatus {
   EXPIRED
 }
 
+enum DemoStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
 model Workspace {
   id String @id @default(uuid()) @db.Uuid
   name String
@@ -84,6 +90,7 @@ model Workspace {
   providerRequestLogs ProviderRequestLog[]
   outreachDrafts OutreachDraft[]
   publicAuditReports PublicAuditReport[]
+  leadDemos LeadDemo[]
   createdAt DateTime @default(now())
 }
 
@@ -167,6 +174,7 @@ model Lead {
   websiteScans WebsiteScan[]
   outreachDrafts OutreachDraft[]
   publicAuditReports PublicAuditReport[]
+  leadDemos LeadDemo[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   archivedAt DateTime?
@@ -260,6 +268,49 @@ model PublicAuditReportView {
   viewedAt DateTime @default(now())
   @@index([reportId, viewedAt])
   @@index([reportId, viewerHash, viewedAt])
+}
+
+model LeadDemo {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type String
+  preset String
+  status DemoStatus @default(DRAFT)
+  brief Json
+  content Json
+  publicSlug String? @unique
+  conceptStatus String?
+  conceptPreset String?
+  conceptImagePath String?
+  conceptPrompt String?
+  conceptModel String?
+  conceptGeneratedAt DateTime?
+  conceptErrorCode String?
+  viewCount Int @default(0)
+  firstViewedAt DateTime?
+  lastViewedAt DateTime?
+  publishedAt DateTime?
+  archivedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  views LeadDemoView[]
+  @@index([leadId, createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+model LeadDemoView {
+  id String @id @default(uuid()) @db.Uuid
+  demoId String @db.Uuid
+  demo LeadDemo @relation(fields: [demoId], references: [id], onDelete: Cascade)
+  viewerHash String?
+  userAgent String?
+  referrer String?
+  viewedAt DateTime @default(now())
+  @@index([demoId, viewedAt])
+  @@index([demoId, viewerHash, viewedAt])
 }
 
 model DiscoveredBusiness {

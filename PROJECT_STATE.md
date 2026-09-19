@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-19
 Branch: main
-Last commit: feat: use RapidAPI transport for Places discovery (local, not pushed)
+Last commit: feat: enrich Lead Inbox with RapidAPI Place Details (local, not pushed)
 
 ## Current Phase
-Phase 2 — Discovery. Task B.2: CODE COMPLETE, LIVE ACCEPTANCE PENDING.
+Phase 2 — Discovery. Task B.3 complete.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -23,31 +23,35 @@ Phase 2 — Discovery. Task B.2: CODE COMPLETE, LIVE ACCEPTANCE PENDING.
 - RapidAPI Google Map Places (New V2) is the active Text Search transport.
 - Direct Google transport remains available through configuration but is disabled by default.
 - RapidAPI search performs one request per click, requests only place ID/name/address, and caps results at 20.
+- RapidAPI Text Search is live verified with Đà Lạt → Homestay.
+- RapidAPI Place Details enriches only businesses selected into Lead Inbox.
+- Lead Inbox persists and displays phone, website, rating, review count, opening hours and enrichment status.
+- CRM creation copies enriched phone and website; Direct Google details is disabled while RapidAPI transport is active.
 
 ## Not Implemented
 - Website audit, scoring, AI and public audit reports.
 
 ## Known Issues
-- `.env` has no `RAPIDAPI_KEY`, `RAPIDAPI_HOST`, or `PLACES_TRANSPORT`; live RapidAPI discovery and full manual acceptance are not yet verified in this workspace.
-- Lead Inbox fetches live Google Place details for up to 10 items per page; this has per-view API cost.
 - RapidAPI Basic plan has a hard limit of 100 requests/day.
+- Email is not supplied by Places and remains manual until Website Audit enrichment.
 
 ## Verification
 - Task A.1: typecheck PASS; lint PASS; tests PASS (2); build PASS; seed PASS; migration status PASS.
 - Task B: migration applied; typecheck PASS; lint PASS; tests PASS (13, mocked Google); build PASS. Live Google flow PENDING.
-- Task B.2: typecheck PASS; lint PASS; tests PASS (19, mocked RapidAPI); build PASS. Live acceptance PENDING because no RapidAPI key is configured.
+- Task B.2: RapidAPI Text Search live verified.
+- Task B.3: migration applied; typecheck PASS; lint PASS; tests PASS (28); build PASS; diff check PASS. Live Đà Lạt → Homestay → Inbox enrichment → CRM phone/website autofill PASS.
 
 ## Last Completed Task
-Task A.1 — seed loads `.env`; login submit regression test; baseline checks pass.
+Task B.3 — RapidAPI Place Details enrichment and CRM phone/website autofill.
 
 ## Current Task
-Task B.2 code complete; RapidAPI transport is active by default and direct Google fallback is retained.
+Task B.3 complete; RapidAPI controls Text Search and Place Details.
 
 ## Next Task
-Configure `PLACES_TRANSPORT`, `RAPIDAPI_KEY`, and `RAPIDAPI_HOST`; manually verify Đà Lạt → Homestay → Inbox → CRM. Do not start website audit until real search quality is checked.
+Await the next explicitly assigned task.
 
 ## Important Decisions
 - Google API key remains server-only.
 - Required RapidAPI variables: `PLACES_TRANSPORT`, `RAPIDAPI_KEY`, `RAPIDAPI_HOST` (local `.env` only).
-- Google place ID may be retained; other Places content is fetched when displayed and not stored as a permanent provider mirror.
+- Google place ID remains the canonical provider identity; only selected enrichment fields are persisted.
 - No automated outreach or phase 3+ features.

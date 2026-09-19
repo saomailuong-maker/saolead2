@@ -54,4 +54,4 @@ RAPIDAPI_HOST="google-map-places-new-v2.p.rapidapi.com"
 
 Không đưa key vào Git. Basic plan có giới hạn cứng 100 request/ngày; mỗi lần bấm tìm tạo đúng một request và tối đa 20 kết quả. Direct Google adapter vẫn được giữ làm fallback bằng `PLACES_TRANSPORT="direct-google"` cùng `GOOGLE_MAPS_API_KEY`.
 
-RapidAPI Text Search chỉ lấy place ID, tên và địa chỉ. Search session lưu place ID; Lead Inbox yêu cầu xác nhận thông tin trước khi tạo CRM lead. Không lưu payload Places đầy đủ trong database.
+RapidAPI Text Search chỉ lấy place ID, tên và địa chỉ. Khi người dùng chọn một kết quả để đưa vào Lead Inbox, ứng dụng gọi thêm đúng một Place Details request và lưu các trường cần thiết như điện thoại, website, rating, số đánh giá và giờ mở cửa. CRM Lead được tạo từ Inbox sẽ tự điền điện thoại và website; email vẫn để trống để nhập thủ công. Không gọi Place Details cho các kết quả chưa được chọn.

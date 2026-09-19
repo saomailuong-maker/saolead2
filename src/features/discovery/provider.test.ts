@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { PlacesConfigError, PlacesTransportError, RapidApiPlacesTransport, RAPIDAPI_EXPECTED_HOST, RAPIDAPI_TEXT_SEARCH_URL, createSearchTransport } from "./provider";
+import { PlacesConfigError, PlacesService, PlacesTransportError, RapidApiPlacesTransport, RAPIDAPI_EXPECTED_HOST, RAPIDAPI_PLACE_DETAILS_BASE_URL, RAPIDAPI_TEXT_SEARCH_URL, createSearchTransport } from "./provider";
 import { searchInputSchema } from "./query";
 
 const input = searchInputSchema.parse({ location: "Đà Lạt", industry: "Homestay", maxResults: 20 });
@@ -13,7 +13,7 @@ describe("RapidApiPlacesTransport", () => {
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0]?.[0]).toBe(RAPIDAPI_TEXT_SEARCH_URL);
     expect(request.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-RapidAPI-Key": "test-key", "X-RapidAPI-Host": RAPIDAPI_EXPECTED_HOST, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress" });
-    expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toEqual({ textQuery: "homestay in Đà Lạt, Lâm Đồng, Việt Nam", pageSize: 20 });
+    expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toEqual({ textQuery: "homestay Đà Lạt", pageSize: 20 });
   });
   it("returns an empty list", async () => { const request = vi.fn(async () => response({ places: [] })); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).search(input)).resolves.toEqual([]); });
   it("fails when the key is missing", async () => { await expect(new RapidApiPlacesTransport("", RAPIDAPI_EXPECTED_HOST, vi.fn() as typeof fetch).search(input)).rejects.toBeInstanceOf(PlacesConfigError); });
@@ -25,4 +25,19 @@ describe("RapidApiPlacesTransport", () => {
   });
   it("rejects a malformed response", async () => { const request = vi.fn(async () => response({ places: "invalid" })); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).search(input)).rejects.toMatchObject({ providerCode: "MALFORMED_RESPONSE" }); });
   it("keeps direct Google selectable as fallback", () => { expect(createSearchTransport("direct-google").name).toBe("direct-google"); expect(createSearchTransport("rapidapi").name).toBe("rapidapi"); });
+
+  it("routes Place Details through RapidAPI and normalizes enrichment", async () => {
+    const request = vi.fn(async (...args: Parameters<typeof fetch>) => { void args; return response({ id: "ChIJabc123", displayName: { text: "Mây Homestay" }, formattedAddress: "Đà Lạt", nationalPhoneNumber: "0912 345 678", internationalPhoneNumber: "+84 912 345 678", websiteUri: "https://example.com", rating: 4.7, userRatingCount: 128, regularOpeningHours: { weekdayDescriptions: ["Thứ Hai: 08:00–17:00"] }, businessStatus: "OPERATIONAL" }); });
+    const transport = new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch);
+    const details = await new PlacesService(transport).getDetails("ChIJabc123");
+    expect(details).toMatchObject({ sourceSystem: "google_places", externalId: "ChIJabc123", phone: "0912 345 678", websiteUrl: "https://example.com", rating: 4.7, reviewCount: 128, businessStatus: "OPERATIONAL" });
+    expect(request.mock.calls[0]?.[0]).toBe(`${RAPIDAPI_PLACE_DETAILS_BASE_URL}/ChIJabc123`);
+    expect(request.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-RapidAPI-Host": RAPIDAPI_EXPECTED_HOST, "X-Goog-FieldMask": "id,displayName,formattedAddress,nationalPhoneNumber,internationalPhoneNumber,websiteUri,rating,userRatingCount,regularOpeningHours,businessStatus" });
+    expect(request.mock.calls[0]?.[1]?.headers).not.toHaveProperty("X-Goog-Api-Key");
+  });
+
+  it("accepts missing optional detail fields", async () => { const request = vi.fn(async () => response({ id: "ChIJabc123" })); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).getDetails("ChIJabc123")).resolves.toMatchObject({ phone: null, websiteUrl: null, rating: null, reviewCount: null, openingHours: null }); });
+  it.each([403, 404, 429])("reports Place Details HTTP %s", async (status) => { const request = vi.fn(async () => response({ code: `HTTP_${status}`, message: "Provider error" }, status)); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).getDetails("ChIJabc123")).rejects.toMatchObject({ operation: "details", httpStatus: status, providerCode: `HTTP_${status}` }); });
+  it("reports malformed Place Details", async () => { const request = vi.fn(async () => response({ displayName: { text: "Missing ID" } })); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).getDetails("ChIJabc123")).rejects.toMatchObject({ operation: "details", providerCode: "MALFORMED_RESPONSE" }); });
+  it("reports Place Details timeout", async () => { const request = vi.fn(async () => { throw new DOMException("Timed out", "TimeoutError"); }); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).getDetails("ChIJabc123")).rejects.toMatchObject({ operation: "details", providerCode: "TIMEOUT", httpStatus: null }); });
 });

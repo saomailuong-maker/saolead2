@@ -21,7 +21,7 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
   try {
     const provider = new PlacesService();
     const results = await provider.search(parsed.data);
-    const session = await db.searchSession.create({ data: { workspaceId: actor.workspaceId, provider: "google_places", query: buildTextQuery(parsed.data), location: parsed.data.location, industry: parsed.data.industry, resultCount: results.length, resultPlaceIds: results.map((r) => r.externalId) } });
+    const session = await db.searchSession.create({ data: { workspaceId: actor.workspaceId, provider: "google_places", query: buildTextQuery(parsed.data), location: parsed.data.location, industry: parsed.data.industry, resultCount: results.length, resultPlaceIds: results.map((r) => r.externalId), resultsJson: results } });
     const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: results.map((r) => r.externalId) } }, select: { externalId: true } });
     const seen = new Set(existing.map((r) => r.externalId));
     console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
@@ -41,8 +41,20 @@ export async function addToInbox(form: FormData) {
   if (!session || !canAddToInbox(session.resultPlaceIds, externalId, false)) redirect("/discover?error=session");
   const existing = await db.discoveredBusiness.findUnique({ where: { provider_externalId: { provider: "google_places", externalId } }, select: { id: true } });
   if (!canAddToInbox(session.resultPlaceIds, externalId, Boolean(existing))) redirect("/lead-inbox?existing=1");
+  const basic = Array.isArray(session.resultsJson) ? session.resultsJson.find((value): value is BusinessSearchResult => Boolean(value && typeof value === "object" && "externalId" in value && value.externalId === externalId && "name" in value && typeof value.name === "string")) : undefined;
+  let details: Awaited<ReturnType<PlacesService["getDetails"]>> | null = null;
+  let detailsErrorCode: string | null = null;
+  const provider = new PlacesService();
   try {
-    await db.discoveredBusiness.create({ data: { workspaceId: actor.workspaceId, provider: "google_places", externalId, industry: session.industry, location: session.location, searchSessionId: session.id } });
+    details = await provider.getDetails(externalId);
+    console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "details", external_id: externalId, status: "ok" }));
+  } catch (error) {
+    detailsErrorCode = error instanceof PlacesTransportError ? error.providerCode : error instanceof PlacesConfigError ? "CONFIG_ERROR" : "UNKNOWN";
+    const detail = error instanceof PlacesTransportError ? { transport: error.transport, operation: error.operation, http_status: error.httpStatus, provider_code: error.providerCode, provider_message: error.providerMessage, duration_ms: error.durationMs } : { transport: error instanceof PlacesConfigError ? error.transport : "unknown", operation: "details", http_status: null, provider_code: detailsErrorCode, provider_message: error instanceof Error ? error.message : null, duration_ms: null };
+    console.error(JSON.stringify({ event: "provider_request", provider: "google_places", external_id: externalId, status: "error", ...detail }));
+  }
+  try {
+    await db.discoveredBusiness.create({ data: { workspaceId: actor.workspaceId, provider: "google_places", externalId, name: details?.name ?? basic?.name ?? null, address: details?.address ?? basic?.address ?? null, industry: session.industry, location: session.location, phone: details?.phone ?? null, websiteUrl: details?.websiteUrl ?? null, rating: details?.rating ?? null, reviewCount: details?.reviewCount ?? null, ...(details?.openingHours != null ? { openingHours: details.openingHours as Prisma.InputJsonValue } : {}), businessStatus: details?.businessStatus ?? null, detailsStatus: details ? "SUCCESS" : "FAILED", detailsFetchedAt: new Date(), detailsErrorCode, searchSessionId: session.id } });
   } catch (error) {
     if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;
     redirect("/lead-inbox?existing=1");
@@ -69,7 +81,7 @@ export async function createCrmLeadFromInbox(form: FormData) {
   const lead = await db.$transaction(async (tx) => {
     const claimed = await tx.discoveredBusiness.updateMany({ where: { id, workspaceId: actor.workspaceId, status: "QUALIFIED" }, data: { status: "CRM_CREATED" } });
     if (!claimed.count) return null;
-    const created = await tx.lead.create({ data: { workspaceId: actor.workspaceId, ownerUserId: actor.user.id, businessName, businessNameNormalized: normalizeName(businessName), industry: item.industry, locationText: locationText || item.location, sourceType: "google_places_user_confirmed", sourceExternalId: item.externalId } });
+    const created = await tx.lead.create({ data: { workspaceId: actor.workspaceId, ownerUserId: actor.user.id, businessName, businessNameNormalized: normalizeName(businessName), industry: item.industry, locationText: locationText || item.address || item.location, phone: item.phone, websiteUrl: item.websiteUrl, sourceType: "google_places_user_confirmed", sourceExternalId: item.externalId } });
     await tx.discoveredBusiness.update({ where: { id }, data: { crmLeadId: created.id } });
     return created;
   });

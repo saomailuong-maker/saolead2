@@ -16,5 +16,5 @@ const terms: Record<(typeof industries)[number], string> = {
 };
 
 export function buildTextQuery(input: SearchBusinessesInput) {
-  return `${terms[input.industry]}${input.keyword ? ` ${input.keyword}` : ""} in ${input.location}, Lâm Đồng, Việt Nam`;
+  return `${terms[input.industry]}${input.keyword ? ` ${input.keyword}` : ""} ${input.location}`;
 }

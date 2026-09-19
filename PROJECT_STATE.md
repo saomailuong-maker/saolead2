@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-19
 Branch: main
-Last commit: feat: add deterministic opportunity engine (local, not pushed)
+Last commit: feat: add deterministic opportunity engine (pushed)
 
 ## Current Phase
-Phase 2 — Discovery, Website Audit and Opportunity Engine. Task D complete.
+Phase 2 — Discovery quality and Priority Score. Task B4 and Task E code complete; both manual acceptance gates pending.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -30,9 +30,13 @@ Phase 2 — Discovery, Website Audit and Opportunity Engine. Task D complete.
 - Lead Detail can run and persist a server-side homepage Website Audit with HTTP, SEO, contact/conversion and structure evidence.
 - Website Audit rejects private/reserved targets and revalidates every redirect.
 - Lead Detail computes a concise, deterministic opportunity list and contact summary from CRM data plus the latest successful audit.
+- Lead Detail and Leads list compute an explainable 0–100 priority score with HOT/WARM/LOW/CLOSED bands.
+- Leads can be filtered by priority and sorted dynamically without persisted scores.
+- Discovery Text Search uses a hard geographic restriction plus defensive Haversine/address filtering for preset sales areas.
+- `/discover?session=...` restores accepted results after refresh without another provider request.
 
 ## Not Implemented
-- Numeric scoring, AI and public audit reports.
+- AI and public audit reports.
 
 ## Known Issues
 - RapidAPI Basic plan has a hard limit of 100 requests/day.
@@ -46,12 +50,14 @@ Phase 2 — Discovery, Website Audit and Opportunity Engine. Task D complete.
 - Task B.3: migration applied; typecheck PASS; lint PASS; tests PASS (28); build PASS; diff check PASS. Live Đà Lạt → Homestay → Inbox enrichment → CRM phone/website autofill PASS.
 - Task C: migration applied; typecheck PASS; lint PASS; tests PASS (54); build PASS; migration status PASS; diff check PASS. Public website scan persisted/redisplayed and private-target rejection manually verified.
 - Task D: no migration; typecheck PASS; lint PASS; tests PASS (62); build PASS; diff check PASS. Lead with audit and lead without website manually verified.
+- Task E: no migration; typecheck PASS; lint PASS; tests PASS (94); build PASS; diff check PASS. Social-profile classification patch applied; manual business-ranking acceptance PENDING.
+- Task B4: no migration; typecheck PASS; lint PASS; tests PASS (104); build PASS; diff check PASS. Manual geo/F5 acceptance PENDING.
 
 ## Last Completed Task
-Task D — Deterministic Opportunity Engine.
+Task D — Deterministic Opportunity Engine (`9885e5f`, pushed).
 
 ## Current Task
-Task D complete; evidence-backed opportunities and contact reasons are available on Lead Detail.
+Task B4 and Task E code complete. Geo/F5 acceptance and business-ranking acceptance remain required before their respective commits.
 
 ## Next Task
 Await the next explicitly assigned task.
@@ -62,6 +68,10 @@ Await the next explicitly assigned task.
 - Google place ID remains the canonical provider identity; only selected enrichment fields are persisted.
 - Task B.3 commit `f6980d5` is pushed to GitHub; RapidAPI Text Search, Place Details, Inbox enrichment and CRM autofill are live verified.
 - Task C commit `458a397` is pushed to GitHub and Website Audit is live verified.
+- Task D commit `9885e5f` is pushed to GitHub and Opportunity Engine is verified.
 - Website Audit stores concise checks/findings and never stores full HTML.
 - Opportunities are computed dynamically; Task D adds no persistence or numeric score.
+- Priority scores are computed dynamically; Task E adds no persistence and does not represent conversion probability.
+- Known social-platform URLs are preserved as contact channels but are not treated or audited as standalone websites.
+- Discovery search-area radii are operational sales zones with a 5 km filter tolerance and must be tuned only from local acceptance evidence.
 - No automated outreach or phase 3+ features.

@@ -1,0 +1,86 @@
+
+> saobeo-lead@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.165:3000
+- Environments: .env
+✓ Ready in 398ms
+✓ Running next.config.ts took 41ms
+
+ GET /leads?sort=priority 307 in 383ms (next.js: 193ms, application-code: 191ms)
+ GET /login 200 in 56ms (next.js: 19ms, application-code: 37ms)
+ GET /leads?sort=priority 307 in 42ms (next.js: 6ms, application-code: 36ms)
+ GET /login 200 in 32ms (next.js: 3ms, application-code: 29ms)
+ GET /leads?sort=priority 200 in 2.2s (next.js: 6ms, application-code: 2.2s)
+ GET /leads/30973990-9690-46b3-9aa3-7682842bcd1c 200 in 742ms (next.js: 671ms, application-code: 71ms)
+ GET /leads/30973990-9690-46b3-9aa3-7682842bcd1c 200 in 58ms (next.js: 17ms, application-code: 41ms)
+ GET /login 200 in 103ms (next.js: 4ms, application-code: 99ms)
+ GET /login 200 in 44ms (next.js: 7ms, application-code: 37ms)
+ GET /leads/30973990-9690-46b3-9aa3-7682842bcd1c 200 in 103ms (next.js: 36ms, application-code: 67ms)
+ GET /login 200 in 106ms (next.js: 3ms, application-code: 102ms)
+ GET /login 200 in 82ms (next.js: 46ms, application-code: 36ms)
+ GET /leads/30973990-9690-46b3-9aa3-7682842bcd1c 200 in 85ms (next.js: 25ms, application-code: 61ms)
+ GET /login 200 in 79ms (next.js: 3ms, application-code: 76ms)
+ GET /login 200 in 60ms (next.js: 40ms, application-code: 20ms)
+ GET /leads/30973990-9690-46b3-9aa3-7682842bcd1c 200 in 2.1s (next.js: 21ms, application-code: 2.1s)
+ GET /leads?sort=priority 200 in 2.2s (next.js: 11ms, application-code: 2.1s)
+ GET /leads/30973990-9690-46b3-9aa3-7682842bcd1c 200 in 51ms (next.js: 15ms, application-code: 36ms)
+ GET / 200 in 2.1s (next.js: 24ms, application-code: 2.1s)
+ GET /discover 200 in 44ms (next.js: 25ms, application-code: 19ms)
+{"event":"provider_request","provider":"google_places","transport":"rapidapi","operation":"text_search","workspace_id":"b44d5d08-a0ee-469a-92e3-4c562c24d591","result_count":2,"status":"ok"}
+ POST /discover 200 in 741ms (next.js: 3ms, application-code: 739ms)
+  └─ ƒ searchBusinesses({"results":[]}, {}) in 717ms src/features/discovery/actions.ts
+{"event":"provider_request","provider":"google_places","transport":"rapidapi","operation":"details","external_id":"ChIJ9Qmn13ZHcTERUN5Cp7aNqF8","status":"ok"}
+ GET /lead-inbox?added=1 200 in 62ms (next.js: 23ms, application-code: 39ms)
+ POST /discover 200 in 612ms (next.js: 3ms, application-code: 609ms)
+  └─ ƒ addToInbox({}) in 528ms src/features/discovery/actions.ts
+ POST /lead-inbox?added=1 200 in 74ms (next.js: 3ms, application-code: 71ms)
+  └─ ƒ setInboxStatus({}) in 25ms src/features/discovery/actions.ts
+ GET /lead-inbox 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /lead-inbox 200 in 26ms (next.js: 4ms, application-code: 22ms)
+ GET /leads 200 in 32ms (next.js: 2ms, application-code: 30ms)
+ GET /leads?q=&industry=&stage=&priority=&sort=updated 200 in 62ms (next.js: 3ms, application-code: 60ms)
+ GET /leads?q=&industry=&stage=NEW&priority=&sort=updated 200 in 70ms (next.js: 3ms, application-code: 67ms)
+ GET /discover 200 in 21ms (next.js: 4ms, application-code: 16ms)
+ GET /lead-inbox 200 in 31ms (next.js: 3ms, application-code: 28ms)
+ GET /discover 200 in 20ms (next.js: 2ms, application-code: 18ms)
+ GET /lead-inbox 200 in 30ms (next.js: 3ms, application-code: 27ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 68ms (next.js: 13ms, application-code: 55ms)
+ POST /lead-inbox 200 in 105ms (next.js: 2ms, application-code: 103ms)
+  └─ ƒ createCrmLeadFromInbox({}) in 19ms src/features/discovery/actions.ts
+ POST /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 76ms (next.js: 14ms, application-code: 62ms)
+  └─ ƒ updateLead({}) in 17ms src/app/actions.ts
+ GET /lead-inbox 200 in 29ms (next.js: 3ms, application-code: 26ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 53ms (next.js: 17ms, application-code: 36ms)
+ GET /lead-inbox 200 in 29ms (next.js: 3ms, application-code: 26ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 45ms (next.js: 16ms, application-code: 29ms)
+ GET /discover 200 in 26ms (next.js: 4ms, application-code: 22ms)
+ GET /discover 200 in 21ms (next.js: 3ms, application-code: 18ms)
+ GET /discover 200 in 18ms (next.js: 3ms, application-code: 15ms)
+ GET /leads 200 in 29ms (next.js: 4ms, application-code: 25ms)
+ GET /lead-inbox 200 in 29ms (next.js: 3ms, application-code: 26ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 47ms (next.js: 15ms, application-code: 32ms)
+✓ Compiled in 55ms
+ GET /login 200 in 66ms (next.js: 3ms, application-code: 63ms)
+ GET /login 200 in 47ms (next.js: 4ms, application-code: 43ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 2.1s (next.js: 15ms, application-code: 2.1s)
+ GET /login 200 in 68ms (next.js: 3ms, application-code: 65ms)
+ GET /login 200 in 54ms (next.js: 4ms, application-code: 50ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 67ms (next.js: 29ms, application-code: 39ms)
+ GET /login 200 in 81ms (next.js: 2ms, application-code: 79ms)
+ GET /login 200 in 60ms (next.js: 4ms, application-code: 56ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 76ms (next.js: 41ms, application-code: 35ms)
+ GET /login 200 in 65ms (next.js: 3ms, application-code: 62ms)
+ GET /login 200 in 45ms (next.js: 3ms, application-code: 43ms)
+ GET /leads/98f8e296-25b4-46bc-9211-f4fc13ef5d16 200 in 64ms (next.js: 26ms, application-code: 38ms)
+ GET /discover 200 in 42ms (next.js: 21ms, application-code: 22ms)
+{"event":"provider_request","provider":"google_places","workspace_id":"b44d5d08-a0ee-469a-92e3-4c562c24d591","status":"error","transport":"rapidapi","operation":"text_search","http_status":400,"provider_code":"400","provider_message":"Invalid JSON payload received. Unknown name \"circle\" at 'location_restriction': Cannot find field.","duration_ms":340}
+ POST /discover 200 in 376ms (next.js: 2ms, application-code: 374ms)
+  └─ ƒ searchBusinesses({"results":[]}, {}) in 360ms src/features/discovery/actions.ts
+ GET / 200 in 4.1s (next.js: 4ms, application-code: 4.1s)
+ GET /discover 200 in 28ms (next.js: 3ms, application-code: 25ms)
+{"event":"provider_request","provider":"google_places","workspace_id":"b44d5d08-a0ee-469a-92e3-4c562c24d591","status":"error","transport":"rapidapi","operation":"text_search","http_status":400,"provider_code":"400","provider_message":"Invalid JSON payload received. Unknown name \"circle\" at 'location_restriction': Cannot find field.","duration_ms":335}
+ POST /discover 200 in 373ms (next.js: 3ms, application-code: 370ms)
+  └─ ƒ searchBusinesses({"results":[]}, {}) in 349ms src/features/discovery/actions.ts

@@ -56,8 +56,14 @@ Không đưa key vào Git. Basic plan có giới hạn cứng 100 request/ngày;
 
 RapidAPI Text Search chỉ lấy place ID, tên và địa chỉ. Khi người dùng chọn một kết quả để đưa vào Lead Inbox, ứng dụng gọi thêm đúng một Place Details request và lưu các trường cần thiết như điện thoại, website, rating, số đánh giá và giờ mở cửa. CRM Lead được tạo từ Inbox sẽ tự điền điện thoại và website; email vẫn để trống để nhập thủ công. Không gọi Place Details cho các kết quả chưa được chọn.
 
+Các khu vực tìm kiếm preset dùng `locationRestriction` theo vùng bán hàng cấu hình sẵn, sau đó lọc lại bằng tọa độ và địa chỉ. Search session được đưa vào URL `/discover?session=...`; refresh khôi phục kết quả đã lưu mà không gọi lại RapidAPI.
+
 ## Website Audit
 
 Lead Detail có mục **Website Audit** để quét HTML của trang chủ hiện tại và lưu lịch sử kết quả. Audit thu thập thông tin HTTP, SEO cơ bản, tín hiệu liên hệ/chuyển đổi, cấu trúc liên kết và tạo findings theo quy tắc cố định. URL được kiểm tra DNS và chặn địa chỉ nội bộ trước mỗi request và redirect; mỗi scan giới hạn 5 redirect, khoảng 10 giây và 2 MB HTML.
 
 Ngay dưới kết quả audit, **Cơ hội đề xuất** chuyển Lead và bằng chứng từ lần quét gần nhất thành một danh sách ngắn các cơ hội bán hàng theo quy tắc cố định. Mỗi cơ hội hiển thị lý do, dịch vụ gợi ý và mã bằng chứng; chưa có điểm số hoặc nội dung AI.
+
+**Điểm ưu tiên** tổng hợp khả năng liên hệ, sức mạnh cơ hội và trạng thái bán hàng thành điểm 0–100 có giải thích. Danh sách Leads có thể lọc HOT/WARM/LOW và sắp xếp theo ưu tiên; WON/LOST được đánh dấu CLOSED và không được xếp như lead đang hoạt động.
+
+Liên kết Facebook, Instagram, Zalo, TikTok, LinkedIn và YouTube được nhận diện là kênh mạng xã hội. Chúng không được tính như website riêng, không được Website Audit phân tích và không tạo cơ hội chất lượng website giả.

@@ -8,6 +8,7 @@ import { requireActor } from "../../lib/auth";
 import { db } from "../../lib/db";
 import { auditWebsite } from "./audit";
 import { WebsiteAuditError, type AuditErrorCode } from "./types";
+import { classifyBusinessUrl } from "../../lib/url-classification";
 
 const idSchema = z.string().uuid();
 
@@ -16,6 +17,7 @@ export async function runWebsiteAudit(form: FormData) {
   const lead = await db.lead.findFirst({ where: { id: leadId, workspaceId: actor.workspaceId, archivedAt: null }, select: { id: true, websiteUrl: true } });
   if (!lead) return;
   if (!lead.websiteUrl) redirect(`/leads/${lead.id}?auditError=INVALID_URL`);
+  if (classifyBusinessUrl(lead.websiteUrl).kind === "SOCIAL_PROFILE") redirect(`/leads/${lead.id}?auditError=SOCIAL_PROFILE`);
   const scan = await db.websiteScan.create({ data: { workspaceId: actor.workspaceId, leadId: lead.id, requestedUrl: lead.websiteUrl, status: "PENDING" } });
   try {
     const result = await auditWebsite(lead.websiteUrl);

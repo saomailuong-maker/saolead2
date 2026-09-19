@@ -9,7 +9,7 @@ export type AuditChecks = {
 };
 
 export type AuditResult = { checks: AuditChecks; findings: AuditFinding[] };
-export type AuditErrorCode = "INVALID_URL" | "UNSAFE_TARGET" | "DNS_ERROR" | "TIMEOUT" | "TOO_MANY_REDIRECTS" | "HTTP_ERROR" | "NON_HTML" | "RESPONSE_TOO_LARGE" | "FETCH_FAILED" | "PARSE_FAILED";
+export type AuditErrorCode = "INVALID_URL" | "SOCIAL_PROFILE" | "UNSAFE_TARGET" | "DNS_ERROR" | "TIMEOUT" | "TOO_MANY_REDIRECTS" | "HTTP_ERROR" | "NON_HTML" | "RESPONSE_TOO_LARGE" | "FETCH_FAILED" | "PARSE_FAILED";
 
 export class WebsiteAuditError extends Error {
   constructor(public readonly code: AuditErrorCode, message: string, public readonly context: Record<string, unknown> = {}) { super(message); this.name = "WebsiteAuditError"; }

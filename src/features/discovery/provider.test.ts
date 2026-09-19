@@ -7,14 +7,16 @@ const response = (body: unknown, status = 200) => new Response(typeof body === "
 
 describe("RapidApiPlacesTransport", () => {
   it("normalizes results and preserves Google Place ID identity", async () => {
-    const request = vi.fn(async (...args: Parameters<typeof fetch>) => { void args; return response({ places: [{ id: "ChIJabc123", displayName: { text: "Mây Homestay", languageCode: "vi" }, formattedAddress: "Đà Lạt" }, { id: "ChIJabc123", displayName: { text: "Duplicate" } }] }); });
+    const request = vi.fn(async (...args: Parameters<typeof fetch>) => { void args; return response({ places: [{ id: "ChIJabc123", displayName: { text: "Mây Homestay", languageCode: "vi" }, formattedAddress: "Đà Lạt, Lâm Đồng", location: { latitude: 11.94646, longitude: 108.44193 } }, { id: "ChIJabc123", displayName: { text: "Duplicate" }, location: { latitude: 11.94646, longitude: 108.44193 } }] }); });
     const result = await new RapidApiPlacesTransport("test-key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).search(input);
-    expect(result).toEqual([{ provider: "google_places", externalId: "ChIJabc123", name: "Mây Homestay", address: "Đà Lạt", type: null }]);
+    expect(result).toEqual([{ provider: "google_places", externalId: "ChIJabc123", name: "Mây Homestay", address: "Đà Lạt, Lâm Đồng", type: null, location: { latitude: 11.94646, longitude: 108.44193 }, locationQuality: { distanceKm: 0, accepted: true, reason: "WITHIN_AREA" } }]);
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0]?.[0]).toBe(RAPIDAPI_TEXT_SEARCH_URL);
-    expect(request.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-RapidAPI-Key": "test-key", "X-RapidAPI-Host": RAPIDAPI_EXPECTED_HOST, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress" });
-    expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toEqual({ textQuery: "homestay Đà Lạt", pageSize: 20 });
+    expect(request.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-RapidAPI-Key": "test-key", "X-RapidAPI-Host": RAPIDAPI_EXPECTED_HOST, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location" });
+    expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toEqual({ textQuery: "homestay Đà Lạt", languageCode: "vi", regionCode: "VN", locationRestriction: { circle: { center: { latitude: 11.94646, longitude: 108.44193 }, radius: 25000 } }, pageSize: 20 });
+    expect(request.mock.calls[0]?.[1]?.body).not.toContain("locationBias");
   });
+  it("sends a Đức Trọng hard restriction and rejects a remote result with a misleading name", async () => { const localInput = searchInputSchema.parse({ location: "Đức Trọng", industry: "Khách sạn", maxResults: 20 }); const request = vi.fn<typeof fetch>(async () => response({ places: [{ id: "ChIJremote", displayName: { text: "Khách sạn Đức Trọng" }, formattedAddress: "Cầu Giấy, Hà Nội", location: { latitude: 21.0278, longitude: 105.8342 } }] })); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request).search(localInput)).resolves.toEqual([]); expect(request).toHaveBeenCalledOnce(); expect(JSON.parse(String(request.mock.calls[0]?.[1]?.body))).toMatchObject({ languageCode: "vi", regionCode: "VN", locationRestriction: { circle: { center: { latitude: 11.69722, longitude: 108.31611 }, radius: 30000 } } }); });
   it("returns an empty list", async () => { const request = vi.fn(async () => response({ places: [] })); await expect(new RapidApiPlacesTransport("key", RAPIDAPI_EXPECTED_HOST, request as typeof fetch).search(input)).resolves.toEqual([]); });
   it("fails when the key is missing", async () => { await expect(new RapidApiPlacesTransport("", RAPIDAPI_EXPECTED_HOST, vi.fn() as typeof fetch).search(input)).rejects.toBeInstanceOf(PlacesConfigError); });
   it("fails when the host is missing", async () => { await expect(new RapidApiPlacesTransport("key", "", vi.fn() as typeof fetch).search(input)).rejects.toBeInstanceOf(PlacesConfigError); });

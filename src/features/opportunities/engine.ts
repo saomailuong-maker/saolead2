@@ -1,12 +1,14 @@
 import { isAccommodation, ruleOrder, severityRank } from "./rules";
 import type { LeadOpportunity, OpportunityLead, OpportunityResult, OpportunityScan } from "./types";
+import { classifyBusinessUrl } from "../../lib/url-classification";
 
 export function generateOpportunities(lead: OpportunityLead, scan: OpportunityScan): OpportunityResult {
   const opportunities: LeadOpportunity[] = [];
   const add = (opportunity: LeadOpportunity) => opportunities.push(opportunity);
-  if (!lead.websiteUrl?.trim()) add({ type: "NO_WEBSITE", severity: "HIGH", title: "Chưa có website riêng", reason: "Lead hiện chưa có website được lưu trong CRM.", suggestedService: "Website doanh nghiệp / landing page", evidenceCodes: ["CRM_NO_WEBSITE"], evidence: ["Trường website trong CRM đang để trống."] });
+  const urlClassification = classifyBusinessUrl(lead.websiteUrl);
+  if (urlClassification.kind !== "STANDALONE_WEBSITE") add({ type: "NO_WEBSITE", severity: "HIGH", title: "Chưa có website riêng", reason: urlClassification.kind === "SOCIAL_PROFILE" ? "CRM hiện chỉ có liên kết mạng xã hội, chưa phát hiện website riêng." : "Lead hiện chưa có website hợp lệ được lưu trong CRM.", suggestedService: "Website doanh nghiệp / landing page", evidenceCodes: [urlClassification.kind === "SOCIAL_PROFILE" ? "CRM_SOCIAL_URL_ONLY" : "CRM_NO_WEBSITE"], evidence: [urlClassification.kind === "SOCIAL_PROFILE" ? `Liên kết hiện tại thuộc nền tảng ${urlClassification.platform}.` : "Trường website trong CRM đang trống hoặc không hợp lệ."] });
 
-  const successful = scan?.status === "SUCCESS" && scan.checks ? scan : null;
+  const successful = urlClassification.kind === "STANDALONE_WEBSITE" && scan?.status === "SUCCESS" && scan.checks ? scan : null;
   const auditChecks = successful?.checks;
   if (successful && auditChecks) {
     const codes = new Set(successful.findings.map((finding) => finding.code));
@@ -31,5 +33,5 @@ export function generateOpportunities(lead: OpportunityLead, scan: OpportunitySc
   }
 
   opportunities.sort((a, b) => severityRank[a.severity] - severityRank[b.severity] || ruleOrder.indexOf(a.type) - ruleOrder.indexOf(b.type));
-  return { opportunities, contactReasons: opportunities.slice(0, 3).map((opportunity) => opportunity.reason), auditLimited: Boolean(scan && scan.status !== "SUCCESS") };
+  return { opportunities, contactReasons: opportunities.slice(0, 3).map((opportunity) => opportunity.reason), auditLimited: urlClassification.kind === "STANDALONE_WEBSITE" && Boolean(scan && scan.status !== "SUCCESS") };
 }

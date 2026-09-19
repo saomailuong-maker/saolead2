@@ -7,12 +7,24 @@ import { z } from "zod";
 import { requireActor } from "../../lib/auth";
 import { db } from "../../lib/db";
 import { normalizeName } from "../../lib/lead";
-import { PlacesConfigError, PlacesService, PlacesTransportError, type BusinessSearchResult } from "./provider";
+import { PlacesConfigError, PlacesService, PlacesTransportError, businessSearchResultSchema, type BusinessSearchResult } from "./provider";
 import { buildTextQuery, searchInputSchema } from "./query";
 import { canAddToInbox } from "./inbox";
 
-export type SearchState = { error?: "key" | "provider" | "input"; sessionId?: string; results: (BusinessSearchResult & { inInbox: boolean })[] };
+export type SearchState = { error?: "key" | "provider" | "input"; sessionId?: string; location?: string; industry?: string; results: (BusinessSearchResult & { inInbox: boolean })[] };
 const field = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
+
+export async function restoreSearchSession(sessionId: string): Promise<SearchState> {
+  const actor = await requireActor(); const parsedId = z.string().uuid().safeParse(sessionId);
+  if (!parsedId.success) return { results: [], error: "input" };
+  const session = await db.searchSession.findFirst({ where: { id: parsedId.data, workspaceId: actor.workspaceId, provider: "google_places" } });
+  if (!session) return { results: [] };
+  const parsedResults = z.array(businessSearchResultSchema).safeParse(session.resultsJson);
+  if (!parsedResults.success) return { sessionId: session.id, results: [] };
+  const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: parsedResults.data.map((result) => result.externalId) } }, select: { externalId: true } });
+  const seen = new Set(existing.map((result) => result.externalId));
+  return { sessionId: session.id, location: session.location, industry: session.industry, results: parsedResults.data.map((result) => ({ ...result, inInbox: seen.has(result.externalId) })) };
+}
 
 export async function searchBusinesses(_previous: SearchState, form: FormData): Promise<SearchState> {
   const actor = await requireActor();
@@ -25,7 +37,7 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
     const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: results.map((r) => r.externalId) } }, select: { externalId: true } });
     const seen = new Set(existing.map((r) => r.externalId));
     console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
-    return { sessionId: session.id, results: results.map((r) => ({ ...r, inInbox: seen.has(r.externalId) })) };
+    return { sessionId: session.id, location: parsed.data.location, industry: parsed.data.industry, results: results.map((r) => ({ ...r, inInbox: seen.has(r.externalId) })) };
   } catch (error) {
     const detail = error instanceof PlacesTransportError ? { transport: error.transport, operation: error.operation, http_status: error.httpStatus, provider_code: error.providerCode, provider_message: error.providerMessage, duration_ms: error.durationMs } : { transport: error instanceof PlacesConfigError ? error.transport : "unknown", operation: "text_search", http_status: null, provider_code: error instanceof PlacesConfigError ? "CONFIG_ERROR" : "UNKNOWN", provider_message: error instanceof Error ? error.message : null, duration_ms: null };
     console.error(JSON.stringify({ event: "provider_request", provider: "google_places", workspace_id: actor.workspaceId, status: "error", ...detail }));

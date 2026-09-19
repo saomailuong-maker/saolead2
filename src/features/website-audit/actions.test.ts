@@ -24,4 +24,5 @@ describe("website audit action", () => {
     await expect(runWebsiteAudit(form())).rejects.toThrow("redirect:/leads/00000000-0000-4000-8000-000000000001?auditError=UNSAFE_TARGET");
     expect(mocks.updateScan).toHaveBeenCalledWith({ where: { id: "scan-1" }, data: expect.objectContaining({ status: "FAILED", errorCode: "UNSAFE_TARGET" }) });
   });
+  it("prevents an audit for a known social-platform URL", async () => { mocks.findLead.mockResolvedValue({ id: "00000000-0000-4000-8000-000000000001", websiteUrl: "https://m.facebook.com/example" }); await expect(runWebsiteAudit(form())).rejects.toThrow("redirect:/leads/00000000-0000-4000-8000-000000000001?auditError=SOCIAL_PROFILE"); expect(mocks.createScan).not.toHaveBeenCalled(); expect(mocks.audit).not.toHaveBeenCalled(); });
 });

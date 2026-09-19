@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { addToInbox, searchBusinesses, type SearchState } from "./actions";
 import { industries, locations } from "./query";
 
-export function SearchForm() {
-  const [state, action, pending] = useActionState(searchBusinesses, { results: [] } as SearchState);
-  return <div className="space-y-5"><form action={action} className="card p-5 grid md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_160px_auto] gap-3 items-end"><div><label className="label" htmlFor="location">Khu vực</label><select id="location" name="location" defaultValue="Đà Lạt">{locations.map((v) => <option key={v}>{v}</option>)}</select></div><div><label className="label" htmlFor="industry">Ngành</label><select id="industry" name="industry" defaultValue="Homestay">{industries.map((v) => <option key={v}>{v}</option>)}</select></div><div><label className="label" htmlFor="keyword">Từ khóa bổ sung</label><input id="keyword" name="keyword" maxLength={80} placeholder="Không bắt buộc" /></div><div><label className="label" htmlFor="maxResults">Số kết quả tối đa</label><select id="maxResults" name="maxResults" defaultValue="20"><option value="10">10</option><option value="20">20</option></select></div><button type="submit" disabled={pending} className="btn h-[42px]">{pending ? "Đang tìm..." : "Tìm khách hàng"}</button></form>
+export function SearchForm({ initialState = { results: [] } }: { initialState?: SearchState }) {
+  const [state, action, pending] = useActionState(searchBusinesses, initialState);
+  useEffect(() => { if (state.sessionId) window.history.replaceState(null, "", `/discover?session=${encodeURIComponent(state.sessionId)}`); }, [state.sessionId]);
+  return <div className="space-y-5"><form action={action} className="card p-5 grid md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_160px_auto] gap-3 items-end"><div><label className="label" htmlFor="location">Khu vực</label><select id="location" name="location" defaultValue={initialState.location || "Đà Lạt"}>{locations.map((v) => <option key={v}>{v}</option>)}</select></div><div><label className="label" htmlFor="industry">Ngành</label><select id="industry" name="industry" defaultValue={initialState.industry || "Homestay"}>{industries.map((v) => <option key={v}>{v}</option>)}</select></div><div><label className="label" htmlFor="keyword">Từ khóa bổ sung</label><input id="keyword" name="keyword" maxLength={80} placeholder="Không bắt buộc" /></div><div><label className="label" htmlFor="maxResults">Số kết quả tối đa</label><select id="maxResults" name="maxResults" defaultValue="20"><option value="10">10</option><option value="20">20</option></select></div><button type="submit" disabled={pending} className="btn h-[42px]">{pending ? "Đang tìm..." : "Tìm khách hàng"}</button></form>
     {state.error === "key" && <div role="alert" className="card p-4 text-amber-700">Google Places chưa được cấu hình. Vui lòng kiểm tra transport và khóa API.</div>}
     {state.error === "provider" && <div role="alert" className="card p-4 text-red-700">Không thể tìm doanh nghiệp lúc này. Vui lòng thử lại.</div>}
     {state.error === "input" && <div role="alert" className="card p-4 text-red-700">Thông tin tìm kiếm không hợp lệ.</div>}

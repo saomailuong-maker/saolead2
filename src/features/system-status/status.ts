@@ -4,6 +4,7 @@ type StatusDb = {
   $queryRaw: <T>(query: TemplateStringsArray) => Promise<T>;
   providerRequestLog: { findFirst: (args: object) => Promise<Record<string, unknown> | null> };
   websiteScan: { findFirst: (args: object) => Promise<{ status: string; httpStatus: number | null; createdAt: Date } | null> };
+  outreachDraft: { findFirst: (args: object) => Promise<{ status: string; model: string; createdAt: Date } | null> };
 };
 
 export function placesConfigStatus(env: Record<string, string | undefined> = process.env) {
@@ -11,6 +12,7 @@ export function placesConfigStatus(env: Record<string, string | undefined> = pro
   const configured = transport === "rapidapi" ? Boolean(env.RAPIDAPI_KEY && env.RAPIDAPI_HOST) : Boolean(env.GOOGLE_MAPS_API_KEY);
   return { transport, configured };
 }
+export function openAIConfigStatus(env: Record<string, string | undefined> = process.env) { return { configured: Boolean(env.OPENAI_API_KEY), model: env.OPENAI_MODEL || "gpt-5.6-luna" }; }
 
 export async function getSystemStatus(workspaceId: string, client: StatusDb = db as unknown as StatusDb) {
   const started = performance.now();
@@ -19,11 +21,13 @@ export async function getSystemStatus(workspaceId: string, client: StatusDb = db
     await client.$queryRaw`SELECT 1`;
     database = { ok: true, responseTimeMs: Math.round(performance.now() - started) };
   } catch { database = { ok: false, responseTimeMs: Math.round(performance.now() - started) }; }
-  const [providerResult, websiteScanResult] = await Promise.allSettled([
+  const [providerResult, websiteScanResult, outreachResult] = await Promise.allSettled([
     client.providerRequestLog.findFirst({ where: { workspaceId }, orderBy: { createdAt: "desc" } }),
     client.websiteScan.findFirst({ where: { workspaceId }, orderBy: { createdAt: "desc" }, select: { status: true, httpStatus: true, createdAt: true } }),
+    client.outreachDraft.findFirst({ where: { workspaceId }, orderBy: { createdAt: "desc" }, select: { status: true, model: true, createdAt: true } }),
   ]);
   const provider = providerResult.status === "fulfilled" ? providerResult.value : null;
   const websiteScan = websiteScanResult.status === "fulfilled" ? websiteScanResult.value : null;
-  return { app: { ok: true }, database, places: placesConfigStatus(), provider, websiteScan };
+  const outreachDraft = outreachResult.status === "fulfilled" ? outreachResult.value : null;
+  return { app: { ok: true }, database, places: placesConfigStatus(), openAI: openAIConfigStatus(), provider, websiteScan, outreachDraft };
 }

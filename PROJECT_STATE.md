@@ -5,7 +5,7 @@ Branch: main
 Last commit: feat: add deterministic opportunity engine (pushed)
 
 ## Current Phase
-Phase 2 — Discovery quality and Priority Score. Task B4.1 provider diagnostics code complete; manual acceptance pending.
+Phase 2 — Evidence-based Sales Assistant. Task F code complete; manual draft acceptance pending.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -37,9 +37,11 @@ Phase 2 — Discovery quality and Priority Score. Task B4.1 provider diagnostics
 - Text Search uses the required rectangular `locationRestriction`; server-side Haversine and address conflict filters remain active.
 - `/discover` shows safe provider diagnostics and RapidAPI quota headers when supplied.
 - Authenticated `/system-status` shows app, database, Places configuration, recent provider telemetry and latest Website Audit status without secrets.
+- Lead Detail computes a deterministic sales strategy before any AI request and can create one evidence-based outreach draft per manual click.
+- Sales drafts use OpenAI Responses API structured output, deterministic claim checks, workspace-scoped persistence, edit/copy/save controls and local objection responses with no auto-send.
 
 ## Not Implemented
-- AI and public audit reports.
+- Public audit reports, demo generation, proposals and automated outreach.
 
 ## Known Issues
 - RapidAPI Basic plan has a hard limit of 100 requests/day.
@@ -55,13 +57,14 @@ Phase 2 — Discovery quality and Priority Score. Task B4.1 provider diagnostics
 - Task D: no migration; typecheck PASS; lint PASS; tests PASS (62); build PASS; diff check PASS. Lead with audit and lead without website manually verified.
 - Task E: no migration; typecheck PASS; lint PASS; tests PASS (94); build PASS; diff check PASS. Social-profile classification patch applied; manual business-ranking acceptance PENDING.
 - Task B4: no migration; typecheck PASS; lint PASS; tests PASS (104); build PASS; diff check PASS. Manual geo/F5 acceptance PENDING.
-- Task B4.1: minimal ProviderRequestLog migration applied; typecheck PASS; lint PASS; tests PASS (113); build PASS; migration status PASS; diff check PASS. Manual provider diagnostics acceptance PENDING.
+- Task B4.1: minimal ProviderRequestLog migration applied; typecheck PASS; lint PASS; tests PASS (113); build PASS; migration status PASS; diff check PASS. Commit `d0a3eed` pushed and manually verified; Places HTTP 200, quota visible and `/system-status` working.
+- Task F: OutreachDraft migration applied; messaging-quality patch adds three styles and Zalo/Facebook, phone and email outputs; typecheck PASS; lint PASS; tests PASS (138); build PASS; migration status PASS; diff check PASS. Real draft acceptance PENDING.
 
 ## Last Completed Task
-Task D — Deterministic Opportunity Engine (`9885e5f`, pushed).
+Task B4.1 — Provider Diagnostics (`d0a3eed`, pushed and manually verified).
 
 ## Current Task
-Task B4.1 code complete. Provider diagnostics manual acceptance remains required before commit.
+Task F code complete. Real sales-draft acceptance remains required before commit.
 
 ## Next Task
 Await the next explicitly assigned task.
@@ -79,4 +82,6 @@ Await the next explicitly assigned task.
 - Known social-platform URLs are preserved as contact channels but are not treated or audited as standalone websites.
 - Discovery search-area radii are operational sales zones with a 5 km filter tolerance and must be tuned only from local acceptance evidence.
 - Provider telemetry stores only safe status metadata and quota snapshots; it never stores API keys or authentication headers.
+- Sales Assistant sends only compact verified context, stores no hidden prompt or secret, and never sends outreach automatically.
+- Customer-facing drafts reject internal labels/provider language, limit first-contact questions and keep detailed discovery questions for after a prospect replies.
 - No automated outreach or phase 3+ features.

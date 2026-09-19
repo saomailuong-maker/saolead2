@@ -50,6 +50,8 @@ Transport hiện tại là RapidAPI Google Map Places (New V2). Cấu hình `.en
 PLACES_TRANSPORT="rapidapi"
 RAPIDAPI_KEY="YOUR_KEY"
 RAPIDAPI_HOST="google-map-places-new-v2.p.rapidapi.com"
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-5.6-luna"
 ```
 
 Không đưa key vào Git. Basic plan có giới hạn cứng 100 request/ngày; mỗi lần bấm tìm tạo đúng một request và tối đa 20 kết quả. Direct Google adapter vẫn được giữ làm fallback bằng `PLACES_TRANSPORT="direct-google"` cùng `GOOGLE_MAPS_API_KEY`.
@@ -67,3 +69,7 @@ Ngay dưới kết quả audit, **Cơ hội đề xuất** chuyển Lead và b�
 **Điểm ưu tiên** tổng hợp khả năng liên hệ, sức mạnh cơ hội và trạng thái bán hàng thành điểm 0–100 có giải thích. Danh sách Leads có thể lọc HOT/WARM/LOW và sắp xếp theo ưu tiên; WON/LOST được đánh dấu CLOSED và không được xếp như lead đang hoạt động.
 
 Liên kết Facebook, Instagram, Zalo, TikTok, LinkedIn và YouTube được nhận diện là kênh mạng xã hội. Chúng không được tính như website riêng, không được Website Audit phân tích và không tạo cơ hội chất lượng website giả.
+
+## Trợ lý tiếp cận
+
+Lead Detail xác định chiến lược bán hàng bằng quy tắc trước khi người dùng chủ động tạo một bản nháp AI. Mỗi lần bấm tạo gọi đúng một OpenAI Responses request; bản nháp được kiểm tra schema, giọng điệu và tuyên bố không được hỗ trợ trước khi lưu. Kết quả gồm ba phong cách tiếp cận, mỗi phong cách có nội dung riêng cho Zalo/Facebook, điện thoại và email. Người dùng có thể copy, chỉnh sửa và lưu, nhưng ứng dụng không tự gửi tin nhắn. Các câu trả lời phản đối chuẩn hiển thị tại chỗ và không gọi AI.

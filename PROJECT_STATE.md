@@ -2,10 +2,10 @@
 
 Last updated: 2026-09-19
 Branch: main
-Last commit: feat: add deterministic opportunity engine (pushed)
+Last commit: `d32d6c6 feat: add evidence-based sales assistant` (pushed)
 
 ## Current Phase
-Phase 2 — Evidence-based Sales Assistant. Task F code complete; manual draft acceptance pending.
+Phase 3 — Public Audit Report. Task G code complete; manual report acceptance pending.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -39,9 +39,11 @@ Phase 2 — Evidence-based Sales Assistant. Task F code complete; manual draft a
 - Authenticated `/system-status` shows app, database, Places configuration, recent provider telemetry and latest Website Audit status without secrets.
 - Lead Detail computes a deterministic sales strategy before any AI request and can create one evidence-based outreach draft per manual click.
 - Sales drafts use OpenAI Responses API structured output, deterministic claim checks, workspace-scoped persistence, edit/copy/save controls and local objection responses with no auto-send.
+- Lead Detail can intentionally create immutable, sanitized public report snapshots for social-only leads or successful website audits.
+- Opaque `/r/[token]` links render without login, carry noindex/no-store controls, support revoke/expiry and conservatively count browser opens with 30-minute cookie dedupe.
 
 ## Not Implemented
-- Public audit reports, demo generation, proposals and automated outreach.
+- Demo generation, proposals and automated outreach.
 
 ## Known Issues
 - RapidAPI Basic plan has a hard limit of 100 requests/day.
@@ -58,13 +60,14 @@ Phase 2 — Evidence-based Sales Assistant. Task F code complete; manual draft a
 - Task E: no migration; typecheck PASS; lint PASS; tests PASS (94); build PASS; diff check PASS. Social-profile classification patch applied; manual business-ranking acceptance PENDING.
 - Task B4: no migration; typecheck PASS; lint PASS; tests PASS (104); build PASS; diff check PASS. Manual geo/F5 acceptance PENDING.
 - Task B4.1: minimal ProviderRequestLog migration applied; typecheck PASS; lint PASS; tests PASS (113); build PASS; migration status PASS; diff check PASS. Commit `d0a3eed` pushed and manually verified; Places HTTP 200, quota visible and `/system-status` working.
-- Task F: OutreachDraft migration applied; messaging-quality patch adds three styles and Zalo/Facebook, phone and email outputs; typecheck PASS; lint PASS; tests PASS (138); build PASS; migration status PASS; diff check PASS. Real draft acceptance PENDING.
+- Task F: OutreachDraft migration applied; messaging-quality patch adds three styles and Zalo/Facebook, phone and email outputs; typecheck PASS; lint PASS; tests PASS (138); build PASS; migration status PASS; diff check PASS. Commit `d32d6c6` pushed.
+- Task G: PublicAuditReport/View migration applied; typecheck PASS; lint PASS; tests PASS (154); build PASS; migration status PASS; diff check PASS. Manual acceptance PENDING.
 
 ## Last Completed Task
-Task B4.1 — Provider Diagnostics (`d0a3eed`, pushed and manually verified).
+Task F — Evidence-based Sales Assistant (`d32d6c6`, pushed).
 
 ## Current Task
-Task F code complete. Real sales-draft acceptance remains required before commit.
+Task G code complete. Public report manual acceptance remains required before commit.
 
 ## Next Task
 Await the next explicitly assigned task.
@@ -84,4 +87,5 @@ Await the next explicitly assigned task.
 - Provider telemetry stores only safe status metadata and quota snapshots; it never stores API keys or authentication headers.
 - Sales Assistant sends only compact verified context, stores no hidden prompt or secret, and never sends outreach automatically.
 - Customer-facing drafts reject internal labels/provider language, limit first-contact questions and keep detailed discovery questions for after a prospect replies.
+- Public reports are immutable sanitized snapshots; public page views never read mutable Lead/CRM data and report creation/view never calls OpenAI.
 - No automated outreach or phase 3+ features.

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getActor } from "../lib/auth";
-import { logout } from "./actions";
+import { AppShell } from "../components/app-shell";
 import "./globals.css";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -11,8 +10,5 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = { title: "SAOBEO LEAD", description: "CRM khách hàng tiềm năng của Sao Béo" };
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const actor = await getActor();
-  return <html lang="vi" className={cn("font-sans", geist.variable)}><body><div className="min-h-screen md:flex">
-    {actor && <aside className="bg-[#111c32] text-white md:w-60 shrink-0 p-5 flex md:flex-col gap-5"><Link href="/" className="font-bold tracking-wide text-lg">✦ SAOBEO LEAD</Link><nav className="flex md:flex-col gap-2 text-sm overflow-x-auto"><Link className="p-2 hover:bg-white/10 rounded" href="/">Tổng quan</Link><Link className="p-2 hover:bg-white/10 rounded" href="/discover">Tìm khách hàng</Link><Link className="p-2 hover:bg-white/10 rounded" href="/lead-inbox">Lead Inbox</Link><Link className="p-2 hover:bg-white/10 rounded" href="/leads">Leads</Link><Link className="p-2 hover:bg-white/10 rounded" href="/pipeline">Pipeline</Link><Link className="p-2 hover:bg-white/10 rounded" href="/tasks">Công việc</Link><Link className="p-2 hover:bg-white/10 rounded" href="/system-status">Hệ thống</Link></nav><div className="hidden md:block mt-auto text-xs text-slate-300">{actor.user.name}<form action={logout}><button className="mt-2 underline">Đăng xuất</button></form></div></aside>}
-    <main className="min-w-0 flex-1 p-4 md:p-8 max-w-[1600px]">{children}</main>
-  </div></body></html>;
+  return <html lang="vi" className={cn("font-sans", geist.variable)}><body><AppShell actorName={actor?.user.name ?? null}>{children}</AppShell></body></html>;
 }

@@ -66,6 +66,12 @@ enum WebsiteScanStatus {
   FAILED
 }
 
+enum PublicReportStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
 model Workspace {
   id String @id @default(uuid()) @db.Uuid
   name String
@@ -77,6 +83,7 @@ model Workspace {
   websiteScans WebsiteScan[]
   providerRequestLogs ProviderRequestLog[]
   outreachDrafts OutreachDraft[]
+  publicAuditReports PublicAuditReport[]
   createdAt DateTime @default(now())
 }
 
@@ -159,6 +166,7 @@ model Lead {
   tasks Task[]
   websiteScans WebsiteScan[]
   outreachDrafts OutreachDraft[]
+  publicAuditReports PublicAuditReport[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   archivedAt DateTime?
@@ -219,6 +227,39 @@ model OutreachDraft {
   updatedAt DateTime @updatedAt
   @@index([leadId, createdAt])
   @@index([workspaceId, createdAt])
+}
+
+model PublicAuditReport {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leadId String @db.Uuid
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  publicToken String @unique
+  status PublicReportStatus @default(ACTIVE)
+  snapshot Json
+  viewCount Int @default(0)
+  firstViewedAt DateTime?
+  lastViewedAt DateTime?
+  expiresAt DateTime?
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  views PublicAuditReportView[]
+  @@index([leadId, createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+model PublicAuditReportView {
+  id String @id @default(uuid()) @db.Uuid
+  reportId String @db.Uuid
+  report PublicAuditReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  viewerHash String?
+  userAgent String?
+  referrer String?
+  viewedAt DateTime @default(now())
+  @@index([reportId, viewedAt])
+  @@index([reportId, viewerHash, viewedAt])
 }
 
 model DiscoveredBusiness {

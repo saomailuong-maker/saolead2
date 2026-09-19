@@ -1,0 +1,15 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createPublicToken } from "./security";
+import { getPublicReport, recordPublicReportView } from "./repository";
+
+const token = createPublicToken(); const snapshot = { version: 1, business: { name: "Mây" }, reportType: "SOCIAL_ONLY", summary: { headline: "Tóm tắt", intro: "Giới thiệu" }, observations: [], opportunities: [], recommendations: [], cta: { title: "Tiếp theo", detail: "Trao đổi" }, generatedAt: "2026-09-19T00:00:00.000Z" };
+const mocks = { findReport: vi.fn(), findView: vi.fn(), createView: vi.fn(), updateReport: vi.fn(), updateMany: vi.fn(), transaction: vi.fn() };
+const client = { publicAuditReport: { findUnique: mocks.findReport, update: mocks.updateReport, updateMany: mocks.updateMany }, publicAuditReportView: { findFirst: mocks.findView, create: mocks.createView }, $transaction: mocks.transaction };
+describe("public report access and views", () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.findReport.mockResolvedValue({ id: "report-1", status: "ACTIVE", expiresAt: new Date("2026-10-19"), snapshot }); mocks.findView.mockResolvedValue(null); mocks.transaction.mockImplementation(async (callback) => callback(client)); });
+  it("cannot access a report with a wrong token", async () => { await expect(getPublicReport("wrong", new Date("2026-09-20"), client as never)).resolves.toEqual({ kind: "NOT_FOUND" }); expect(mocks.findReport).not.toHaveBeenCalled(); });
+  it.each([["REVOKED", "REVOKED"], ["EXPIRED", "EXPIRED"]] as const)("rejects %s reports", async (status, kind) => { mocks.findReport.mockResolvedValue({ id: "report-1", status, expiresAt: null, snapshot }); await expect(getPublicReport(token, new Date(), client as never)).resolves.toEqual({ kind }); });
+  it("counts a first real view and updates timestamps", async () => { const result = await recordPublicReportView({ token, viewerId: "viewer-one", userAgent: "Mozilla/5.0", referrer: null, now: new Date("2026-09-20") }, client as never); expect(result.counted).toBe(true); expect(mocks.createView).toHaveBeenCalledOnce(); expect(mocks.updateReport).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ viewCount: { increment: 1 } }) })); });
+  it("dedupes the same anonymous browser within 30 minutes", async () => { mocks.findView.mockResolvedValue({ id: "view-1" }); const result = await recordPublicReportView({ token, viewerId: "viewer-one", userAgent: "Mozilla/5.0", referrer: null, now: new Date("2026-09-20") }, client as never); expect(result).toEqual({ counted: false, reason: "DEDUPED" }); expect(mocks.transaction).not.toHaveBeenCalled(); });
+  it("does not count an obvious preview bot", async () => { const result = await recordPublicReportView({ token, viewerId: "viewer-one", userAgent: "facebookexternalhit/1.1", referrer: null }, client as never); expect(result).toEqual({ counted: false, reason: "BOT" }); expect(mocks.findReport).not.toHaveBeenCalled(); });
+});

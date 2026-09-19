@@ -73,3 +73,7 @@ Liên kết Facebook, Instagram, Zalo, TikTok, LinkedIn và YouTube được nh�
 ## Trợ lý tiếp cận
 
 Lead Detail xác định chiến lược bán hàng bằng quy tắc trước khi người dùng chủ động tạo một bản nháp AI. Mỗi lần bấm tạo gọi đúng một OpenAI Responses request; bản nháp được kiểm tra schema, giọng điệu và tuyên bố không được hỗ trợ trước khi lưu. Kết quả gồm ba phong cách tiếp cận, mỗi phong cách có nội dung riêng cho Zalo/Facebook, điện thoại và email. Người dùng có thể copy, chỉnh sửa và lưu, nhưng ứng dụng không tự gửi tin nhắn. Các câu trả lời phản đối chuẩn hiển thị tại chỗ và không gọi AI.
+
+## Báo cáo gửi khách
+
+Lead Detail có thể tạo snapshot báo cáo công khai cho lead chỉ có mạng xã hội hoặc website đã audit thành công. Link `/r/<token>` dùng token ngẫu nhiên 256 bit, không yêu cầu đăng nhập, không hiển thị dữ liệu CRM nội bộ và có thể thu hồi. Lượt mở được ghi nhận bằng cookie ẩn danh, bỏ qua bot preview rõ ràng và không đếm lại cùng trình duyệt trong 30 phút. Tạo và mở báo cáo không gọi OpenAI.

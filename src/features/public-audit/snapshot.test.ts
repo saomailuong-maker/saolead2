@@ -1,0 +1,15 @@
+import { describe, expect, it } from "vitest";
+import { buildPublicAuditSnapshot } from "./snapshot";
+import type { OpportunityResult } from "../opportunities/types";
+import type { SalesStrategy } from "../sales-assistant/types";
+import type { AuditChecks } from "../website-audit/types";
+
+const strategy: SalesStrategy = { recommendation: "WEBSITE_OPPORTUNITY", confidence: "HIGH", primaryAngle: "internal", supportingEvidence: ["CRM_SOCIAL_URL_ONLY"], risks: [], discoveryQuestions: [], allowedClaims: [], prohibitedClaims: [] };
+const empty: OpportunityResult = { opportunities: [], contactReasons: [], auditLimited: false };
+const lead = { businessName: "Mây Homestay", industry: "Homestay", locationText: "Đà Lạt", websiteUrl: "https://facebook.com/may", phone: "0900000000", facebookUrl: null, instagramUrl: null, zaloUrl: null, sourceType: "google_places_user_confirmed", notes: "CRM secret", provider: "rapidapi", model: "gpt-secret", apiKey: "sk-secret" };
+const checks: AuditChecks = { reachability: { requestedUrl: "https://may.example", finalUrl: "https://may.example", httpStatus: 200, redirectCount: 0, https: true, durationMs: 10, contentType: "text/html" }, seo: { title: "Mây", description: null, viewport: "width=device-width", canonical: null, lang: "vi", h1Count: 1, openGraphTitle: null, openGraphDescription: null, favicon: null, robots: null }, contact: { telLinks: 0, mailtoLinks: 0, forms: 0, zalo: false, messenger: false, whatsapp: false, facebook: true, instagram: false, ctas: [] }, structure: { about: true, services: false, products: false, contact: false, blog: false, faq: false, portfolio: false, booking: false } };
+
+describe("public audit snapshot", () => {
+  it("builds a sanitized SOCIAL_ONLY snapshot", () => { const snapshot = buildPublicAuditSnapshot(lead, null, empty, strategy, new Date("2026-09-19T00:00:00Z")); expect(snapshot.reportType).toBe("SOCIAL_ONLY"); expect(snapshot.observations.some((item) => item.title === "Chưa phát hiện website riêng")).toBe(true); const json = JSON.stringify(snapshot); for (const forbidden of ["CRM_SOCIAL_URL_ONLY", "rapidapi", "CRM secret", "gpt-secret", "sk-secret", "0900000000"]) expect(json).not.toContain(forbidden); });
+  it("builds WEBSITE_AUDIT only from a successful standalone scan", () => { const websiteLead = { ...lead, websiteUrl: "https://may.example" }; const opportunities: OpportunityResult = { opportunities: [{ type: "CONTACT_CONVERSION", severity: "HIGH", title: "Thiếu CTA", reason: "internal", suggestedService: "internal", evidenceCodes: ["MISSING_CONTACT_CTA"], evidence: ["internal"] }], contactReasons: [], auditLimited: false }; const snapshot = buildPublicAuditSnapshot(websiteLead, { status: "SUCCESS", createdAt: new Date("2026-09-19T00:00:00Z"), checks }, opportunities, { ...strategy, recommendation: "OPTIMIZE_EXISTING" }); expect(snapshot.reportType).toBe("WEBSITE_AUDIT"); expect(JSON.stringify(snapshot)).not.toContain("MISSING_CONTACT_CTA"); expect(snapshot.observations.length).toBeLessThanOrEqual(5); expect(snapshot.recommendations.length).toBeLessThanOrEqual(3); });
+});

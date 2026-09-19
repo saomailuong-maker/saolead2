@@ -5,7 +5,7 @@ Branch: main
 Last commit: feat: add deterministic opportunity engine (pushed)
 
 ## Current Phase
-Phase 2 — Discovery quality and Priority Score. Task B4 and Task E code complete; both manual acceptance gates pending.
+Phase 2 — Discovery quality and Priority Score. Task B4.1 provider diagnostics code complete; manual acceptance pending.
 
 ## Runtime
 - Node.js 24.13.0 LTS; Next.js 16.3.5; Prisma 6.19.3.
@@ -34,6 +34,9 @@ Phase 2 — Discovery quality and Priority Score. Task B4 and Task E code comple
 - Leads can be filtered by priority and sorted dynamically without persisted scores.
 - Discovery Text Search uses a hard geographic restriction plus defensive Haversine/address filtering for preset sales areas.
 - `/discover?session=...` restores accepted results after refresh without another provider request.
+- Text Search uses the required rectangular `locationRestriction`; server-side Haversine and address conflict filters remain active.
+- `/discover` shows safe provider diagnostics and RapidAPI quota headers when supplied.
+- Authenticated `/system-status` shows app, database, Places configuration, recent provider telemetry and latest Website Audit status without secrets.
 
 ## Not Implemented
 - AI and public audit reports.
@@ -52,12 +55,13 @@ Phase 2 — Discovery quality and Priority Score. Task B4 and Task E code comple
 - Task D: no migration; typecheck PASS; lint PASS; tests PASS (62); build PASS; diff check PASS. Lead with audit and lead without website manually verified.
 - Task E: no migration; typecheck PASS; lint PASS; tests PASS (94); build PASS; diff check PASS. Social-profile classification patch applied; manual business-ranking acceptance PENDING.
 - Task B4: no migration; typecheck PASS; lint PASS; tests PASS (104); build PASS; diff check PASS. Manual geo/F5 acceptance PENDING.
+- Task B4.1: minimal ProviderRequestLog migration applied; typecheck PASS; lint PASS; tests PASS (113); build PASS; migration status PASS; diff check PASS. Manual provider diagnostics acceptance PENDING.
 
 ## Last Completed Task
 Task D — Deterministic Opportunity Engine (`9885e5f`, pushed).
 
 ## Current Task
-Task B4 and Task E code complete. Geo/F5 acceptance and business-ranking acceptance remain required before their respective commits.
+Task B4.1 code complete. Provider diagnostics manual acceptance remains required before commit.
 
 ## Next Task
 Await the next explicitly assigned task.
@@ -74,4 +78,5 @@ Await the next explicitly assigned task.
 - Priority scores are computed dynamically; Task E adds no persistence and does not represent conversion probability.
 - Known social-platform URLs are preserved as contact channels but are not treated or audited as standalone websites.
 - Discovery search-area radii are operational sales zones with a 5 km filter tolerance and must be tuned only from local acceptance evidence.
+- Provider telemetry stores only safe status metadata and quota snapshots; it never stores API keys or authentication headers.
 - No automated outreach or phase 3+ features.

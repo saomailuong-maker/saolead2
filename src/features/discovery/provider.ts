@@ -1,18 +1,22 @@
 import { z } from "zod";
 import type { SearchBusinessesInput } from "./query";
 import { buildTextQuery } from "./query";
-import { assessLocationQuality, searchAreas } from "./search-areas";
+import { assessLocationQuality, deriveSearchViewport, searchAreas } from "./search-areas";
 
 export type PlacesTransport = "rapidapi" | "direct-google";
+export type ProviderErrorKind = "CONFIG" | "BAD_REQUEST" | "AUTH" | "QUOTA" | "TIMEOUT" | "NETWORK" | "PROVIDER" | "MALFORMED_RESPONSE";
+export type ProviderQuotaMetric = { limit: string | null; remaining: string | null; reset: string | null };
+export type ProviderQuotaSnapshot = { requests?: ProviderQuotaMetric; generic?: ProviderQuotaMetric; rapidFreePlansHardLimit?: ProviderQuotaMetric };
+export type ProviderDiagnostics = { transport: PlacesTransport; operation: "text_search" | "details"; status: "SUCCESS" | "ERROR"; errorKind: ProviderErrorKind | null; httpStatus: number | null; providerCode: string | null; providerMessage: string | null; durationMs: number | null; quota: ProviderQuotaSnapshot | null };
 export const businessSearchResultSchema = z.object({ provider: z.literal("google_places"), externalId: z.string(), name: z.string(), address: z.string().nullable(), type: z.string().nullable(), location: z.object({ latitude: z.number(), longitude: z.number() }).nullable(), locationQuality: z.object({ distanceKm: z.number().nullable(), accepted: z.boolean(), reason: z.enum(["WITHIN_AREA", "OUTSIDE_AREA", "MISSING_COORDINATES", "ADDRESS_CONFLICT"]) }) });
 export type BusinessSearchResult = z.infer<typeof businessSearchResultSchema>;
 export type PlaceDetailsEnrichment = { sourceSystem: "google_places"; externalId: string; name: string | null; address: string | null; phone: string | null; internationalPhone: string | null; websiteUrl: string | null; rating: number | null; reviewCount: number | null; openingHours: unknown | null; businessStatus: string | null };
 export interface BusinessDiscoveryProvider { search(input: SearchBusinessesInput): Promise<BusinessSearchResult[]>; getDetails(id: string): Promise<PlaceDetailsEnrichment> }
-interface PlacesTransportAdapter { readonly name: PlacesTransport; search(input: SearchBusinessesInput): Promise<BusinessSearchResult[]>; getDetails(id: string): Promise<PlaceDetailsEnrichment> }
+interface PlacesTransportAdapter { readonly name: PlacesTransport; lastDiagnostics: ProviderDiagnostics | null; search(input: SearchBusinessesInput): Promise<BusinessSearchResult[]>; getDetails(id: string): Promise<PlaceDetailsEnrichment> }
 
 export class PlacesConfigError extends Error { constructor(public readonly transport: PlacesTransport, message: string) { super(message); this.name = "PlacesConfigError"; } }
 export class PlacesTransportError extends Error {
-  constructor(public readonly transport: PlacesTransport, public readonly operation: "text_search" | "details", public readonly httpStatus: number | null, public readonly providerCode: string | null, public readonly providerMessage: string | null, public readonly durationMs: number) { super(`${transport} ${operation} failed`); this.name = "PlacesTransportError"; }
+  constructor(public readonly transport: PlacesTransport, public readonly operation: "text_search" | "details", public readonly kind: ProviderErrorKind, public readonly httpStatus: number | null, public readonly providerCode: string | null, public readonly providerMessage: string | null, public readonly durationMs: number, public readonly quota: ProviderQuotaSnapshot | null = null) { super(`${transport} ${operation} failed`); this.name = "PlacesTransportError"; }
 }
 
 const placeSchema = z.object({ id: z.string().min(1), displayName: z.object({ text: z.string() }).optional(), formattedAddress: z.string().optional(), primaryType: z.string().optional(), location: z.object({ latitude: z.number(), longitude: z.number() }).optional() });
@@ -34,14 +38,39 @@ function normalize(place: z.infer<typeof placeSchema>, input: SearchBusinessesIn
 }
 function normalizedPlaces(body: unknown, transport: PlacesTransport, durationMs: number, input: SearchBusinessesInput) {
   const parsed = searchResponseSchema.safeParse(body);
-  if (!parsed.success) throw new PlacesTransportError(transport, "text_search", 200, "MALFORMED_RESPONSE", "Invalid Places response shape", durationMs);
+  if (!parsed.success) throw new PlacesTransportError(transport, "text_search", "MALFORMED_RESPONSE", 200, "MALFORMED_RESPONSE", "Invalid Places response shape", durationMs);
   const unique = new Map<string, BusinessSearchResult>();
   for (const place of parsed.data.places.map((value) => normalize(value, input))) if (place && !unique.has(place.externalId)) unique.set(place.externalId, place);
   const providerCount = unique.size; const accepted = [...unique.values()].filter((place) => place.locationQuality.accepted);
   console.info(JSON.stringify({ event: "discovery_geo_filter", location: input.location, providerCount, acceptedCount: accepted.length, rejectedCount: providerCount - accepted.length }));
   return accepted;
 }
-function searchBody(input: SearchBusinessesInput) { const area = searchAreas[input.location]; return { textQuery: buildTextQuery(input), languageCode: "vi", regionCode: "VN", locationRestriction: { circle: { center: area.center, radius: area.radiusMeters } }, pageSize: Math.min(20, input.maxResults) }; }
+export function searchBody(input: SearchBusinessesInput) { const area = searchAreas[input.location]; return { textQuery: buildTextQuery(input), languageCode: "vi", regionCode: "VN", locationRestriction: { rectangle: deriveSearchViewport(area) }, pageSize: Math.min(20, input.maxResults) }; }
+const safeHeader = (headers: Headers, name: string) => headers.get(name)?.slice(0, 100) || null;
+export function parseQuotaHeaders(headers: Headers): ProviderQuotaSnapshot | null {
+  const groups = {
+    requests: ["x-ratelimit-requests-limit", "x-ratelimit-requests-remaining", "x-ratelimit-requests-reset"],
+    generic: ["x-ratelimit-limit", "x-ratelimit-remaining", "x-ratelimit-reset"],
+    rapidFreePlansHardLimit: ["x-rate-limit-rapid-free-plans-hard-limit-limit", "x-rate-limit-rapid-free-plans-hard-limit-remaining", "x-rate-limit-rapid-free-plans-hard-limit-reset"],
+  } as const;
+  const result: ProviderQuotaSnapshot = {};
+  for (const [key, names] of Object.entries(groups) as [keyof ProviderQuotaSnapshot, readonly [string, string, string]][]) {
+    const metric = { limit: safeHeader(headers, names[0]), remaining: safeHeader(headers, names[1]), reset: safeHeader(headers, names[2]) };
+    if (metric.limit || metric.remaining || metric.reset) result[key] = metric;
+  }
+  return Object.keys(result).length ? result : null;
+}
+export function providerErrorKind(status: number): ProviderErrorKind {
+  if (status === 400) return "BAD_REQUEST";
+  if (status === 401 || status === 403) return "AUTH";
+  if (status === 429) return "QUOTA";
+  if (status >= 500) return "PROVIDER";
+  return "PROVIDER";
+}
+function safeProviderMessage(value: string | null) {
+  if (!value) return null;
+  return value.replace(/(api[_-]?key|token|authorization|password)\s*[:=]\s*[^\s,;]+/gi, "$1=[redacted]").slice(0, 300);
+}
 async function errorDetails(response: Response) {
   try { const body = await response.json() as { error?: { code?: string | number; message?: string }; code?: string | number; message?: string }; return { code: String(body.error?.code ?? body.code ?? response.status), message: body.error?.message ?? body.message ?? response.statusText }; }
   catch { return { code: String(response.status), message: response.statusText || null }; }
@@ -51,12 +80,13 @@ function normalizeDetails(place: z.infer<typeof detailsSchema>): PlaceDetailsEnr
 }
 function validPlaceId(id: string) { return /^[A-Za-z0-9_-]{5,200}$/.test(id); }
 function timeoutError(transport: PlacesTransport, operation: "text_search" | "details", started: number, error: unknown): never {
-  const code = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError") ? "TIMEOUT" : "NETWORK_ERROR";
-  throw new PlacesTransportError(transport, operation, null, code, error instanceof Error ? error.message : "Network request failed", Math.round(performance.now() - started));
+  const timedOut = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+  throw new PlacesTransportError(transport, operation, timedOut ? "TIMEOUT" : "NETWORK", null, timedOut ? "TIMEOUT" : "NETWORK_ERROR", timedOut ? "Request timed out" : "Network request failed", Math.round(performance.now() - started));
 }
 
 export class RapidApiPlacesTransport implements PlacesTransportAdapter {
   readonly name = "rapidapi" as const;
+  lastDiagnostics: ProviderDiagnostics | null = null;
   constructor(private readonly apiKey = process.env.RAPIDAPI_KEY, private readonly host = process.env.RAPIDAPI_HOST, private readonly request: typeof fetch = fetch) {}
   async search(input: SearchBusinessesInput) {
     if (!this.apiKey) throw new PlacesConfigError(this.name, "RAPIDAPI_KEY missing");
@@ -66,47 +96,56 @@ export class RapidApiPlacesTransport implements PlacesTransportAdapter {
     let response: Response;
     try { response = await this.request(RAPIDAPI_TEXT_SEARCH_URL, { method: "POST", headers: { "Content-Type": "application/json", "X-RapidAPI-Key": this.apiKey, "X-RapidAPI-Host": this.host, "X-Goog-FieldMask": SEARCH_FIELD_MASK }, body: JSON.stringify(searchBody(input)), cache: "no-store", signal: AbortSignal.timeout(12000) }); } catch (error) { timeoutError(this.name, "text_search", started, error); }
     const duration = Math.round(performance.now() - started);
-    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "text_search", response.status, error.code, error.message, duration); }
+    const quota = parseQuotaHeaders(response.headers);
+    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "text_search", providerErrorKind(response.status), response.status, error.code, safeProviderMessage(error.message), duration, quota); }
     let body: unknown;
-    try { body = await response.json(); } catch { throw new PlacesTransportError(this.name, "text_search", response.status, "MALFORMED_RESPONSE", "Response is not JSON", duration); }
-    return normalizedPlaces(body, this.name, duration, input).slice(0, input.maxResults);
+    try { body = await response.json(); } catch { throw new PlacesTransportError(this.name, "text_search", "MALFORMED_RESPONSE", response.status, "MALFORMED_RESPONSE", "Response is not JSON", duration, quota); }
+    const results = normalizedPlaces(body, this.name, duration, input).slice(0, input.maxResults);
+    this.lastDiagnostics = { transport: this.name, operation: "text_search", status: "SUCCESS", errorKind: null, httpStatus: response.status, providerCode: null, providerMessage: null, durationMs: duration, quota };
+    return results;
   }
   async getDetails(id: string) {
-    if (!validPlaceId(id)) throw new PlacesTransportError(this.name, "details", null, "INVALID_PLACE_ID", "Invalid Google Place ID", 0);
+    if (!validPlaceId(id)) throw new PlacesTransportError(this.name, "details", "BAD_REQUEST", null, "INVALID_PLACE_ID", "Invalid Google Place ID", 0);
     if (!this.apiKey) throw new PlacesConfigError(this.name, "RAPIDAPI_KEY missing");
     if (!this.host) throw new PlacesConfigError(this.name, "RAPIDAPI_HOST missing");
     if (this.host !== RAPIDAPI_EXPECTED_HOST) throw new PlacesConfigError(this.name, "RAPIDAPI_HOST invalid");
     const started = performance.now(); let response: Response;
     try { response = await this.request(`${RAPIDAPI_PLACE_DETAILS_BASE_URL}/${encodeURIComponent(id)}`, { headers: { "X-RapidAPI-Key": this.apiKey, "X-RapidAPI-Host": this.host, "X-Goog-FieldMask": DETAIL_FIELD_MASK }, cache: "no-store", signal: AbortSignal.timeout(12000) }); } catch (error) { timeoutError(this.name, "details", started, error); }
     const duration = Math.round(performance.now() - started);
-    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "details", response.status, error.code, error.message, duration); }
-    let body: unknown; try { body = await response.json(); } catch { throw new PlacesTransportError(this.name, "details", response.status, "MALFORMED_RESPONSE", "Response is not JSON", duration); }
+    const quota = parseQuotaHeaders(response.headers);
+    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "details", providerErrorKind(response.status), response.status, error.code, safeProviderMessage(error.message), duration, quota); }
+    let body: unknown; try { body = await response.json(); } catch { throw new PlacesTransportError(this.name, "details", "MALFORMED_RESPONSE", response.status, "MALFORMED_RESPONSE", "Response is not JSON", duration, quota); }
     const parsed = detailsSchema.safeParse(body);
-    if (!parsed.success) throw new PlacesTransportError(this.name, "details", response.status, "MALFORMED_RESPONSE", "Invalid Place Details response shape", duration);
+    if (!parsed.success) throw new PlacesTransportError(this.name, "details", "MALFORMED_RESPONSE", response.status, "MALFORMED_RESPONSE", "Invalid Place Details response shape", duration, quota);
+    this.lastDiagnostics = { transport: this.name, operation: "details", status: "SUCCESS", errorKind: null, httpStatus: response.status, providerCode: null, providerMessage: null, durationMs: duration, quota };
     return normalizeDetails(parsed.data);
   }
 }
 
 export class DirectGooglePlacesTransport implements PlacesTransportAdapter {
   readonly name = "direct-google" as const;
+  lastDiagnostics: ProviderDiagnostics | null = null;
   constructor(private readonly apiKey = process.env.GOOGLE_MAPS_API_KEY, private readonly request: typeof fetch = fetch) {}
   async search(input: SearchBusinessesInput) {
     if (!this.apiKey) throw new PlacesConfigError(this.name, "GOOGLE_MAPS_API_KEY missing");
     const started = performance.now();
     const response = await this.request(`${DIRECT_ENDPOINT}/places:searchText`, { method: "POST", headers: { "Content-Type": "application/json", "X-Goog-Api-Key": this.apiKey, "X-Goog-FieldMask": DIRECT_SEARCH_FIELD_MASK }, body: JSON.stringify(searchBody(input)), cache: "no-store", signal: AbortSignal.timeout(12000) });
     const duration = Math.round(performance.now() - started);
-    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "text_search", response.status, error.code, error.message, duration); }
-    return normalizedPlaces(await response.json(), this.name, duration, input).slice(0, input.maxResults);
+    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "text_search", providerErrorKind(response.status), response.status, error.code, safeProviderMessage(error.message), duration); }
+    const results = normalizedPlaces(await response.json(), this.name, duration, input).slice(0, input.maxResults);
+    this.lastDiagnostics = { transport: this.name, operation: "text_search", status: "SUCCESS", errorKind: null, httpStatus: response.status, providerCode: null, providerMessage: null, durationMs: duration, quota: null };
+    return results;
   }
   async getDetails(id: string) {
-    if (!validPlaceId(id)) throw new PlacesTransportError(this.name, "details", null, "INVALID_PLACE_ID", "Invalid Google Place ID", 0);
+    if (!validPlaceId(id)) throw new PlacesTransportError(this.name, "details", "BAD_REQUEST", null, "INVALID_PLACE_ID", "Invalid Google Place ID", 0);
     if (!this.apiKey) throw new PlacesConfigError(this.name, "GOOGLE_MAPS_API_KEY missing");
     const started = performance.now(); let response: Response;
     try { response = await this.request(`${DIRECT_ENDPOINT}/places/${encodeURIComponent(id)}`, { headers: { "X-Goog-Api-Key": this.apiKey, "X-Goog-FieldMask": DETAIL_FIELD_MASK }, cache: "no-store", signal: AbortSignal.timeout(12000) }); } catch (error) { timeoutError(this.name, "details", started, error); }
     const duration = Math.round(performance.now() - started);
-    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "details", response.status, error.code, error.message, duration); }
+    if (!response.ok) { const error = await errorDetails(response); throw new PlacesTransportError(this.name, "details", providerErrorKind(response.status), response.status, error.code, safeProviderMessage(error.message), duration); }
     const parsed = detailsSchema.safeParse(await response.json());
-    if (!parsed.success) throw new PlacesTransportError(this.name, "details", response.status, "MALFORMED_RESPONSE", "Invalid Place Details response shape", duration);
+    if (!parsed.success) throw new PlacesTransportError(this.name, "details", "MALFORMED_RESPONSE", response.status, "MALFORMED_RESPONSE", "Invalid Place Details response shape", duration);
+    this.lastDiagnostics = { transport: this.name, operation: "details", status: "SUCCESS", errorKind: null, httpStatus: response.status, providerCode: null, providerMessage: null, durationMs: duration, quota: null };
     return normalizeDetails(parsed.data);
   }
 }
@@ -114,6 +153,7 @@ export class DirectGooglePlacesTransport implements PlacesTransportAdapter {
 export class PlacesService implements BusinessDiscoveryProvider {
   constructor(private readonly transport: PlacesTransportAdapter = createPlacesTransport()) {}
   get transportName() { return this.transport.name; }
+  get lastDiagnostics() { return this.transport.lastDiagnostics; }
   search(input: SearchBusinessesInput) { return this.transport.search(input); }
   getDetails(id: string) { return this.transport.getDetails(id); }
 }

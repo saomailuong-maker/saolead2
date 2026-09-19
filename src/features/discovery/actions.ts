@@ -7,12 +7,19 @@ import { z } from "zod";
 import { requireActor } from "../../lib/auth";
 import { db } from "../../lib/db";
 import { normalizeName } from "../../lib/lead";
-import { PlacesConfigError, PlacesService, PlacesTransportError, businessSearchResultSchema, type BusinessSearchResult } from "./provider";
+import { PlacesConfigError, PlacesService, PlacesTransportError, businessSearchResultSchema, type BusinessSearchResult, type ProviderDiagnostics } from "./provider";
+import { diagnosticsFromError, providerDiagnosticsSchema } from "./diagnostics";
 import { buildTextQuery, searchInputSchema } from "./query";
 import { canAddToInbox } from "./inbox";
 
-export type SearchState = { error?: "key" | "provider" | "input"; sessionId?: string; location?: string; industry?: string; results: (BusinessSearchResult & { inInbox: boolean })[] };
+export type SearchState = { error?: "provider" | "input"; diagnostics?: ProviderDiagnostics; sessionId?: string; location?: string; industry?: string; results: (BusinessSearchResult & { inInbox: boolean })[] };
 const field = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
+
+async function saveProviderLog(workspaceId: string, diagnostics: ProviderDiagnostics, searchSessionId?: string) {
+  try {
+    await db.providerRequestLog.create({ data: { workspaceId, searchSessionId, transport: diagnostics.transport, operation: diagnostics.operation, status: diagnostics.status, errorKind: diagnostics.errorKind, httpStatus: diagnostics.httpStatus, providerCode: diagnostics.providerCode, providerMessage: diagnostics.providerMessage, durationMs: diagnostics.durationMs, ...(diagnostics.quota ? { quota: diagnostics.quota as Prisma.InputJsonValue } : {}) } });
+  } catch (error) { console.error(JSON.stringify({ event: "provider_telemetry_persist_failed", message: error instanceof Error ? error.message.slice(0, 120) : "unknown" })); }
+}
 
 export async function restoreSearchSession(sessionId: string): Promise<SearchState> {
   const actor = await requireActor(); const parsedId = z.string().uuid().safeParse(sessionId);
@@ -22,8 +29,10 @@ export async function restoreSearchSession(sessionId: string): Promise<SearchSta
   const parsedResults = z.array(businessSearchResultSchema).safeParse(session.resultsJson);
   if (!parsedResults.success) return { sessionId: session.id, results: [] };
   const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: parsedResults.data.map((result) => result.externalId) } }, select: { externalId: true } });
+  const log = await db.providerRequestLog.findFirst({ where: { workspaceId: actor.workspaceId, searchSessionId: session.id }, orderBy: { createdAt: "desc" } });
+  const parsedDiagnostics = providerDiagnosticsSchema.safeParse(log ? { transport: log.transport, operation: log.operation, status: log.status, errorKind: log.errorKind, httpStatus: log.httpStatus, providerCode: log.providerCode, providerMessage: log.providerMessage, durationMs: log.durationMs, quota: log.quota } : null);
   const seen = new Set(existing.map((result) => result.externalId));
-  return { sessionId: session.id, location: session.location, industry: session.industry, results: parsedResults.data.map((result) => ({ ...result, inInbox: seen.has(result.externalId) })) };
+  return { sessionId: session.id, location: session.location, industry: session.industry, ...(parsedDiagnostics.success ? { diagnostics: parsedDiagnostics.data } : {}), results: parsedResults.data.map((result) => ({ ...result, inInbox: seen.has(result.externalId) })) };
 }
 
 export async function searchBusinesses(_previous: SearchState, form: FormData): Promise<SearchState> {
@@ -34,14 +43,18 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
     const provider = new PlacesService();
     const results = await provider.search(parsed.data);
     const session = await db.searchSession.create({ data: { workspaceId: actor.workspaceId, provider: "google_places", query: buildTextQuery(parsed.data), location: parsed.data.location, industry: parsed.data.industry, resultCount: results.length, resultPlaceIds: results.map((r) => r.externalId), resultsJson: results } });
+    const diagnostics = provider.lastDiagnostics ?? { transport: provider.transportName, operation: "text_search" as const, status: "SUCCESS" as const, errorKind: null, httpStatus: 200, providerCode: null, providerMessage: null, durationMs: null, quota: null };
+    await saveProviderLog(actor.workspaceId, diagnostics, session.id);
     const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: results.map((r) => r.externalId) } }, select: { externalId: true } });
     const seen = new Set(existing.map((r) => r.externalId));
     console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
-    return { sessionId: session.id, location: parsed.data.location, industry: parsed.data.industry, results: results.map((r) => ({ ...r, inInbox: seen.has(r.externalId) })) };
+    return { sessionId: session.id, location: parsed.data.location, industry: parsed.data.industry, diagnostics, results: results.map((r) => ({ ...r, inInbox: seen.has(r.externalId) })) };
   } catch (error) {
+    const diagnostics = diagnosticsFromError(error);
+    await saveProviderLog(actor.workspaceId, diagnostics);
     const detail = error instanceof PlacesTransportError ? { transport: error.transport, operation: error.operation, http_status: error.httpStatus, provider_code: error.providerCode, provider_message: error.providerMessage, duration_ms: error.durationMs } : { transport: error instanceof PlacesConfigError ? error.transport : "unknown", operation: "text_search", http_status: null, provider_code: error instanceof PlacesConfigError ? "CONFIG_ERROR" : "UNKNOWN", provider_message: error instanceof Error ? error.message : null, duration_ms: null };
     console.error(JSON.stringify({ event: "provider_request", provider: "google_places", workspace_id: actor.workspaceId, status: "error", ...detail }));
-    return { results: [], error: error instanceof PlacesConfigError ? "key" : "provider" };
+    return { results: [], error: "provider", diagnostics };
   }
 }
 

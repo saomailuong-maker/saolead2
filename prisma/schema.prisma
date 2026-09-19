@@ -75,6 +75,7 @@ model Workspace {
   searchSessions SearchSession[]
   discoveredBusinesses DiscoveredBusiness[]
   websiteScans WebsiteScan[]
+  providerRequestLogs ProviderRequestLog[]
   createdAt DateTime @default(now())
 }
 
@@ -176,7 +177,28 @@ model SearchSession {
   resultsJson Json?
   createdAt DateTime @default(now())
   discoveredBusinesses DiscoveredBusiness[]
+  providerRequestLogs ProviderRequestLog[]
   @@index([workspaceId, createdAt])
+}
+
+model ProviderRequestLog {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  searchSessionId String? @db.Uuid
+  searchSession SearchSession? @relation(fields: [searchSessionId], references: [id], onDelete: SetNull)
+  transport String
+  operation String
+  status String
+  errorKind String?
+  httpStatus Int?
+  providerCode String?
+  providerMessage String?
+  durationMs Int?
+  quota Json?
+  createdAt DateTime @default(now())
+  @@index([workspaceId, createdAt])
+  @@index([searchSessionId, createdAt])
 }
 
 model DiscoveredBusiness {

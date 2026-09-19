@@ -56,7 +56,7 @@ Không đưa key vào Git. Basic plan có giới hạn cứng 100 request/ngày;
 
 RapidAPI Text Search chỉ lấy place ID, tên và địa chỉ. Khi người dùng chọn một kết quả để đưa vào Lead Inbox, ứng dụng gọi thêm đúng một Place Details request và lưu các trường cần thiết như điện thoại, website, rating, số đánh giá và giờ mở cửa. CRM Lead được tạo từ Inbox sẽ tự điền điện thoại và website; email vẫn để trống để nhập thủ công. Không gọi Place Details cho các kết quả chưa được chọn.
 
-Các khu vực tìm kiếm preset dùng `locationRestriction` theo vùng bán hàng cấu hình sẵn, sau đó lọc lại bằng tọa độ và địa chỉ. Search session được đưa vào URL `/discover?session=...`; refresh khôi phục kết quả đã lưu mà không gọi lại RapidAPI.
+Các khu vực tìm kiếm preset dùng `locationRestriction.rectangle` theo vùng bán hàng cấu hình sẵn, sau đó lọc lại bằng tọa độ và địa chỉ. Search session được đưa vào URL `/discover?session=...`; refresh khôi phục kết quả đã lưu mà không gọi lại RapidAPI. `/discover` hiển thị trạng thái request và quota an toàn khi provider gửi các header tương ứng; `/system-status` cung cấp kiểm tra hệ thống có xác thực.
 
 ## Website Audit
 

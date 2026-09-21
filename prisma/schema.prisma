@@ -289,6 +289,9 @@ model LeadDemo {
   conceptModel String?
   conceptGeneratedAt DateTime?
   conceptErrorCode String?
+  conceptHttpStatus Int?
+  conceptProviderCode String?
+  conceptSafeMessage String?
   viewCount Int @default(0)
   firstViewedAt DateTime?
   lastViewedAt DateTime?

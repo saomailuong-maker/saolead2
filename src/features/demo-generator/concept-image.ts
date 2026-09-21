@@ -1,38 +1,22 @@
 import OpenAI from "openai";
 import { mkdir, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { z } from "zod";
 import type { DemoBrief } from "./types";
 
-export const conceptPresetSchema = z.enum(["WARM_HOSPITALITY", "MODERN_LOCAL_BUSINESS", "CLEAN_MINIMAL"]);
-export type ConceptPreset = z.infer<typeof conceptPresetSchema>;
-type ImagesClient = { images: { generate: (input: unknown) => Promise<{ data?: Array<{ b64_json?: string | null }> }> } };
-export class ConceptImageError extends Error { constructor(public code: "CONFIG" | "PROVIDER" | "EMPTY_OUTPUT" | "STORAGE", message: string) { super(message); this.name = "ConceptImageError"; } }
-
-const style: Record<ConceptPreset,string> = {
-  WARM_HOSPITALITY: "warm boutique hospitality, editorial travel aesthetic, natural earthy palette, inviting typography and generous photography-led composition",
-  MODERN_LOCAL_BUSINESS: "modern Vietnamese local business, confident but approachable, crisp information hierarchy, practical conversion-focused layout",
-  CLEAN_MINIMAL: "clean minimal premium layout, abundant whitespace, restrained neutral palette, refined typography and clear calls to action",
-};
-export function buildConceptPrompt(brief: DemoBrief, preset: ConceptPreset) {
-  return `Create one polished landscape visual concept for a website landing page direction. This is design inspiration, not a screenshot of a functioning or official website.
-Business name: ${brief.brand.businessName}.
-Industry: ${brief.brand.industry || "local service business"}.
-Location: ${brief.brand.location || "not specified"}.
-Goal: ${brief.objective}
-Primary CTA direction: ${brief.primaryCTA.label}.
-Visual direction: ${style[preset]}.
-Show a cohesive desktop landing page composition with a strong hero, readable value blocks, tasteful generic illustrative imagery and clear CTA hierarchy. Do not depict the actual property or claim to use real business photos. Do not add prices, ratings, awards, promotions, amenities, availability, customer counts, or performance claims. Avoid tiny unreadable body copy and external brand logos. If text appears, limit it to the verified business name and short generic Vietnamese navigation/CTA labels.`;
-}
-export async function generateConceptImage(input: { brief: DemoBrief; preset: ConceptPreset; demoId: string }, options: { apiKey?: string; model?: string; client?: ImagesClient; outputRoot?: string; now?: Date } = {}) {
-  const apiKey=options.apiKey??process.env.OPENAI_API_KEY; const model=options.model??process.env.OPENAI_IMAGE_MODEL??"gpt-image-2.5-sunburst";
-  if(!apiKey&&!options.client) throw new ConceptImageError("CONFIG","OpenAI Image chưa được cấu hình.");
-  const client=options.client??new OpenAI({apiKey}); const prompt=buildConceptPrompt(input.brief,input.preset); let response;
-  try { response=await client.images.generate({model,prompt,n:1,size:"1536x1024",quality:"medium",output_format:"webp",moderation:"auto"}); }
-  catch(error){ throw new ConceptImageError("PROVIDER",error instanceof Error?`Không thể tạo concept: ${error.message.slice(0,200)}`:"Không thể tạo concept."); }
-  const encoded=response.data?.[0]?.b64_json; if(!encoded) throw new ConceptImageError("EMPTY_OUTPUT","OpenAI không trả về dữ liệu ảnh.");
-  let bytes:Buffer; try { bytes=Buffer.from(encoded,"base64"); if(bytes.length<16) throw new Error("empty"); } catch { throw new ConceptImageError("EMPTY_OUTPUT","Dữ liệu ảnh không hợp lệ."); }
-  const now=options.now??new Date(); const filename=`${input.demoId}-${now.getTime()}.webp`; const relativePath=`/generated/demo-concepts/${filename}`; const root=options.outputRoot??path.join(process.cwd(),"public","generated","demo-concepts");
-  try { await mkdir(root,{recursive:true}); await writeFile(path.join(root,filename),bytes,{flag:"wx"}); } catch(error){ throw new ConceptImageError("STORAGE",error instanceof Error?`Không thể lưu ảnh concept: ${error.message.slice(0,160)}`:"Không thể lưu ảnh concept."); }
-  return { imagePath:relativePath,prompt,model,generatedAt:now };
-}
+export const conceptPresetSchema=z.enum(["WARM_HOSPITALITY","MODERN_LOCAL_BUSINESS","CLEAN_MINIMAL"]);export type ConceptPreset=z.infer<typeof conceptPresetSchema>;
+export type ImageErrorKind="CONFIG"|"AUTH"|"BILLING"|"VERIFICATION"|"RATE_LIMIT"|"BAD_REQUEST"|"PROVIDER"|"STORAGE";
+export type ImageGenerationState={status:"IDLE"|"GENERATING"|"SUCCESS"|"ERROR";model?:string;errorKind?:ImageErrorKind;httpStatus?:number;providerCode?:string;safeMessage?:string;generatedAt?:string};
+type ImagesClient={images:{generate:(input:unknown)=>Promise<{data?:Array<{b64_json?:string|null}>}>}};
+export class ConceptImageError extends Error{constructor(public errorKind:ImageErrorKind,public safeMessage:string,public httpStatus?:number,public providerCode?:string){super(safeMessage);this.name="ConceptImageError"}}
+export type ConceptPromptInput={brief:DemoBrief;reportType?:"SOCIAL_ONLY"|"WEBSITE_AUDIT";socialOnly:boolean;standaloneWebsite:boolean;rating?:number;reviewCount?:number;salesStrategy?:string;opportunities?:string[];preset:ConceptPreset};
+const style:Record<ConceptPreset,string>={WARM_HOSPITALITY:"warm natural hospitality art direction, editorial travel photography mood, tactile materials, calm earth palette",MODERN_LOCAL_BUSINESS:"modern approachable Vietnamese local business art direction, crisp hierarchy, confident color system",CLEAN_MINIMAL:"clean minimal premium art direction, generous whitespace, restrained neutral palette, refined typography"};
+export function buildConceptPrompt(input:ConceptPromptInput){const {brief}=input;const lodging=/hotel|homestay|khách sạn|nhà nghỉ|resort|lưu trú/i.test(brief.brand.industry||"");const context=input.socialOnly?"The business currently relies on social or third-party channels; show an owned website direction that complements those channels.":input.standaloneWebsite?"The business already has a standalone website; show a focused visual optimization direction rather than a wholesale replacement.":"Show a concise owned landing-page direction.";return `Create one landscape ${lodging?"hospitality":"local business"} website style concept for ${brief.brand.businessName}, ${brief.brand.industry||"local service business"}${brief.brand.location?` in ${brief.brand.location}`:""}.
+This is an illustrative web design direction and emotional mood reference, not a real property photo, not an official website, and not a functioning screenshot. ${context}
+Art direction: ${style[input.preset]}. Focus on a photography-led hero composition, color and material direction, card rhythm, responsive desktop-and-mobile visual language, and clear space for an HTML overlay CTA: ${brief.primaryCTA.label}.
+Use minimal visible text. Leave accurate readable copy, navigation and calls to action to the application HTML overlay. Do not generate dense tiny website text.
+Do not invent or show prices, discounts, awards, star classification, ratings, review counts, room count, amenities, availability, promotions, performance claims or specific property details. Do not imply that generated scenery is the real location. Do not add external brand logos.`}
+function cleanCode(value:unknown){const code=typeof value==="string"?value:"";return /^[A-Za-z0-9_.-]{1,80}$/.test(code)?code:undefined}
+export function mapImageProviderError(error:unknown):ConceptImageError{const e=error as {status?:unknown;code?:unknown;message?:unknown;error?:{code?:unknown;message?:unknown}};const status=typeof e?.status==="number"?e.status:undefined;const providerCode=cleanCode(e?.code??e?.error?.code);const message=String(e?.message??e?.error?.message??"").toLowerCase();if(status===401)return new ConceptImageError("AUTH","API key không hợp lệ hoặc không có quyền truy cập OpenAI Image.",status,providerCode);if(status===402||/billing|credit|quota.*billing|insufficient_quota/.test(message))return new ConceptImageError("BILLING","Tài khoản API chưa có hạn mức hoặc cần kiểm tra thanh toán.",status,providerCode);if(/verif|organization.*required|org.*required/.test(message))return new ConceptImageError("VERIFICATION","Tài khoản API cần xác minh tổ chức hoặc chưa đủ quyền dùng model ảnh.",status,providerCode);if(status===429)return new ConceptImageError("RATE_LIMIT","OpenAI đang giới hạn tần suất hoặc hạn mức. Vui lòng thử lại sau.",status,providerCode);if(status===400)return new ConceptImageError("BAD_REQUEST","Yêu cầu tạo ảnh chưa được model chấp nhận. Hãy kiểm tra model hoặc thử preset khác.",status,providerCode);return new ConceptImageError("PROVIDER",status&&status>=500?"Dịch vụ tạo ảnh OpenAI đang gặp lỗi tạm thời.":"OpenAI chưa thể tạo concept lúc này.",status,providerCode)}
+export async function generateConceptImage(input:ConceptPromptInput&{demoId:string},options:{apiKey?:string;model?:string;client?:ImagesClient;outputRoot?:string;now?:Date}={}){const apiKey=options.apiKey??process.env.OPENAI_API_KEY;const model=(options.model??process.env.OPENAI_IMAGE_MODEL??"gpt-image-2.5-flare").trim();if((!apiKey&&!options.client)||!model)throw new ConceptImageError("CONFIG","OpenAI Image chưa được cấu hình đầy đủ.");const client=options.client??new OpenAI({apiKey});const prompt=buildConceptPrompt(input);let response;try{response=await client.images.generate({model,prompt,n:1,size:"1536x1024",quality:"medium",output_format:"webp",moderation:"auto"})}catch(error){throw mapImageProviderError(error)}const encoded=response.data?.[0]?.b64_json;if(!encoded)throw new ConceptImageError("PROVIDER","OpenAI không trả về dữ liệu ảnh.");let bytes:Buffer;try{bytes=Buffer.from(encoded,"base64");if(bytes.length<16)throw new Error("invalid")}catch{throw new ConceptImageError("PROVIDER","Dữ liệu ảnh OpenAI trả về không hợp lệ.")}const now=options.now??new Date();const filename=`concept-${randomBytes(18).toString("hex")}.webp`;const relativePath=`/generated/demo-concepts/${filename}`;const root=options.outputRoot??path.join(process.cwd(),"public","generated","demo-concepts");try{await mkdir(root,{recursive:true});await writeFile(path.join(root,filename),bytes,{flag:"wx"})}catch{throw new ConceptImageError("STORAGE","Ảnh đã tạo nhưng chưa thể lưu vào bộ nhớ cục bộ.")}return{imagePath:relativePath,prompt,model,generatedAt:now}}

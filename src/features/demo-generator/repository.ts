@@ -9,7 +9,7 @@ export async function getPublicDemo(slug: string, client = db) {
   const brief = demoBriefSchema.safeParse(demo.brief); const content = demoContentSchema.safeParse(demo.content); const preset = demoPresetSchema.safeParse(demo.preset);
   if (!brief.success || !content.success || !preset.success) return { kind: "NOT_FOUND" as const };
   const report = await client.publicAuditReport.findFirst({ where: { leadId: demo.leadId, status: "ACTIVE", OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] }, orderBy: { createdAt: "desc" }, select: { publicToken: true } });
-  return { kind: "PUBLISHED" as const, demoId: demo.id, brief: brief.data, content: content.data, preset: preset.data, conceptImagePath: demo.conceptStatus === "READY" ? demo.conceptImagePath : null, reportToken: report?.publicToken ?? null };
+  return { kind: "PUBLISHED" as const, demoId: demo.id, brief: brief.data, content: content.data, preset: preset.data, conceptImagePath: demo.conceptStatus === "SUCCESS" ? demo.conceptImagePath : null, reportToken: report?.publicToken ?? null };
 }
 export async function recordPublicDemoView(input: { slug: string; viewerId: string; userAgent: string | null; referrer: string | null; now?: Date }, client = db) {
   if (isObviousPreviewBot(input.userAgent)) return { counted: false, reason: "BOT" as const };

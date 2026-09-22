@@ -7,10 +7,55 @@ import { PublicAuditReportView } from "../../../features/public-audit/report-vie
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-export const metadata: Metadata = {
-  title: "Báo cáo Thẩm định Hiện diện Số | Sao Béo",
+
+const defaultMetadata: Metadata = {
+  title: "Bản Thẩm định Hiện diện Số | Sao Béo",
+  description: "Bản phân tích cơ hội tiếp cận khách du lịch và giải pháp chốt khách trực tiếp.",
   robots: { index: false, follow: false, nocache: true },
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  try {
+    const access = await getPublicReport(token);
+    if (access.kind === "ACTIVE") {
+      const name = access.snapshot.business.name;
+      const title = `Bản Thẩm định Hiện diện Số — ${name}`;
+      const description = `Bản phân tích cơ hội tiếp cận khách du lịch và giải pháp chốt khách trực tiếp 1-chạm dành riêng cho ${name}.`;
+      return {
+        title,
+        description,
+        robots: { index: false, follow: false, nocache: true },
+        openGraph: {
+          title,
+          description,
+          type: "website",
+          images: [
+            {
+              url: `/r/${token}/opengraph-image`,
+              width: 1200,
+              height: 630,
+              alt: `Báo cáo thẩm định ${name}`,
+            },
+          ],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description,
+          images: [`/r/${token}/opengraph-image`],
+        },
+      };
+    }
+  } catch {
+    // fallback
+  }
+  return defaultMetadata;
+}
 
 export default async function PublicAuditReportPage({
   params,

@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 const mocks = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("../../../features/public-audit/repository", () => ({ getPublicReport: mocks.get }));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("not-found"); } }));
-import PublicAuditReportPage, { metadata } from "./page";
+import PublicAuditReportPage, { generateMetadata } from "./page";
 
 const snapshot = { version: 1 as const, business: { name: "Mây Homestay", industry: "Homestay", location: "Đà Lạt" }, reportType: "SOCIAL_ONLY" as const, summary: { headline: "Thông tin tập trung hơn", intro: "Một vài quan sát ban đầu." }, observations: [{ title: "Chưa phát hiện website riêng", detail: "Hiện đã có Facebook và Google Maps." }], opportunities: [{ title: "Gom thông tin", detail: "Giúp khách xem thuận tiện." }], recommendations: [{ title: "Landing page", detail: "Bắt đầu gọn nhẹ." }], cta: { title: "Bước tiếp theo", detail: "Có thể xem một bản thử trước." }, generatedAt: "2026-09-19T00:00:00.000Z" };
 describe("public audit page", () => {
@@ -11,5 +11,5 @@ describe("public audit page", () => {
   it("shows demo CTA only when a published demo is available", async () => { mocks.get.mockResolvedValue({ kind: "ACTIVE", reportId: "report-1", snapshot, demoSlug: "d".repeat(43), conceptImagePath: null }); const html = renderToStaticMarkup(await PublicAuditReportPage({ params: Promise.resolve({ token: "a".repeat(43) }) })); expect(html).toContain(`/demo/${"d".repeat(43)}`); expect(html).toContain("Mở demo tương tác"); expect(html).not.toContain("Xem concept giao diện"); });
   it("shows the illustrative concept only when it exists", async () => { mocks.get.mockResolvedValue({ kind: "ACTIVE", reportId: "report-1", snapshot, demoSlug: "d".repeat(43), conceptImagePath: "/generated/demo-concepts/safe.webp" }); const html = renderToStaticMarkup(await PublicAuditReportPage({ params: Promise.resolve({ token: "a".repeat(43) }) })); expect(html).toContain("safe.webp"); expect(html).toContain("Xem concept giao diện"); expect(html).toContain("không phải ảnh thật"); });
   it("does not reveal business details after revoke", async () => { mocks.get.mockResolvedValue({ kind: "REVOKED" }); const html = renderToStaticMarkup(await PublicAuditReportPage({ params: Promise.resolve({ token: "a".repeat(43) }) })); expect(html).toContain("không còn khả dụng"); expect(html).not.toContain("Mây Homestay"); });
-  it("declares noindex metadata", () => { expect(metadata.robots).toMatchObject({ index: false, follow: false, nocache: true }); });
+  it("declares noindex metadata", async () => { mocks.get.mockResolvedValue({ kind: "ACTIVE", reportId: "report-1", snapshot, demoSlug: null, conceptImagePath: null }); const meta = await generateMetadata({ params: Promise.resolve({ token: "a".repeat(43) }) }); expect(meta.robots).toMatchObject({ index: false, follow: false, nocache: true }); });
 });

@@ -21,8 +21,9 @@ export function OutreachActionBar({
   publicReportToken?: string | null;
   demoSlug?: string | null;
 }) {
-  const [style, setStyle] = useState<"NATURAL" | "VALUE" | "DEMO">("NATURAL");
+  const [style, setStyle] = useState<"WARM_UP" | "NATURAL" | "VALUE" | "DEMO">("NATURAL");
   const [copied, setCopied] = useState(false);
+  const [copiedFriendNote, setCopiedFriendNote] = useState(false);
   const [statusNotice, setStatusNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -32,44 +33,75 @@ export function OutreachActionBar({
 
   const cleanPhone = (lead.phone || "").replace(/[^+\d]/g, "");
 
+  const friendRequestNote = `Dạ em chào ${lead.businessName}, em Sao bên giải pháp số, em gửi tặng cơ sở bản thẩm định kênh online trong tin nhắn Zalo nhé!`;
+
   const buildMessage = () => {
     const isLodging = /hotel|homestay|khách sạn|nhà nghỉ|resort|lưu trú/i.test(lead.industry || "");
     const lodgingSegment = isLodging ? detectLodgingSegment(lead.businessName, lead.industry || "") : null;
 
+    if (style === "WARM_UP") {
+      if (lodgingSegment === "HOMESTAY" || lodgingSegment === "HOTEL" || lodgingSegment === "VILLA" || isLodging) {
+        return `Dạ em chào bên mình, em có thấy ${lead.businessName} trên Google Maps view và phòng ốc đẹp quá!
+
+Bên mình đợt này còn trống phòng cho khách dịp tới không ạ? Em muốn hỏi trước thông tin ạ.`;
+      }
+      return `Dạ em chào anh/chị, em có xem qua cơ sở của ${lead.businessName} trên Google Maps thấy bên mình làm dịch vụ rất tốt.
+
+Bên mình có đang nhận tư vấn dịch vụ trực tiếp qua Zalo này không ạ?`;
+    }
+
     if (style === "NATURAL") {
       return `Em chào anh/chị, em có xem qua kênh online của ${lead.businessName} trên Google Maps thấy bên mình làm hình ảnh và đánh giá rất tốt.
-Em có chuẩn bị 1 bản thẩm định nhanh về cơ hội tiếp cận khách du lịch và chốt khách trực tiếp cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? ` (Kèm bản thử giao diện: ${demoUrl})` : ""}.
+
+Em có chuẩn bị 1 bản thẩm định nhanh về cơ hội tiếp cận khách du lịch và chốt khách trực tiếp cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Kèm bản thử giao diện: ${demoUrl})` : ""}.
+
 Anh/chị xem qua xem có hữu ích cho mình không nhé!`;
     }
 
     if (style === "VALUE") {
       if (lodgingSegment === "HOMESTAY") {
-        return `Chào anh/chị ${lead.businessName}, em thấy bên mình làm homestay rất có gu và khách đánh giá cao. Tuy nhiên việc mỗi ngày phải trả lời lặp đi lặp lại hàng chục tin nhắn trong inbox Facebook/Zalo rồi khách 'seen không rep' hoặc khách tìm thấy trên Google Maps mà không thấy bảng giá ngay thì khá phí.
-Em có gửi anh/chị bản phân tích giải pháp trang đích bio xem ảnh phòng 360° & cọc Zalo 1-chạm${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? ` · Bản xem thử: ${demoUrl}` : ""}.
+        return `Chào anh/chị ${lead.businessName}, em thấy bên mình làm homestay rất có gu và khách đánh giá cao.
+
+Tuy nhiên việc mỗi ngày phải trả lời lặp đi lặp lại hàng chục tin nhắn trong inbox Facebook/Zalo rồi khách 'seen không rep' hoặc khách tìm thấy trên Google Maps mà không thấy bảng giá ngay thì khá phí.
+
+Em có gửi anh/chị bản phân tích giải pháp trang đích bio xem ảnh phòng 360° & cọc Zalo 1-chạm${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản xem thử: ${demoUrl})` : ""}.
+
 Anh/chị xem qua để tối ưu thời gian trực chat nhé!`;
       }
 
       if (lodgingSegment === "HOTEL") {
-        return `Chào anh/chị ${lead.businessName}, em thấy khách sạn mình đang đón khách trên Google Maps rất đều. Tuy nhiên việc chi trả 15% – 22% phí hoa hồng cho các sàn OTA (Booking/Agoda) mỗi tháng làm hao hụt đáng kể lợi nhuận từ tệp khách hàng quen thuộc.
-Em có gửi anh/chị bản phân tích giải pháp Direct Booking trực tiếp giúp giữ trọn 100% doanh thu và hỗ trợ xuất hóa đơn VAT${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? ` · Bản thử demo: ${demoUrl}` : ""}.
+        return `Chào anh/chị ${lead.businessName}, em thấy khách sạn mình đang đón khách trên Google Maps rất đều.
+
+Tuy nhiên việc chi trả 15% – 22% phí hoa hồng cho các sàn OTA (Booking/Agoda) mỗi tháng làm hao hụt đáng kể lợi nhuận từ tệp khách hàng quen thuộc.
+
+Em có gửi anh/chị bản phân tích giải pháp Direct Booking trực tiếp giúp giữ trọn 100% doanh thu và hỗ trợ xuất hóa đơn VAT${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
+
 Nếu tiện mình cùng trao đổi nhé!`;
       }
 
       if (lodgingSegment === "VILLA") {
-        return `Chào anh/chị ${lead.businessName}, em thấy căn villa của mình rất đẹp và phù hợp cho khách đoàn nghỉ dưỡng. Tuy nhiên các deal villa giá trị cao thì người đại diện đoàn thường khó chốt vì gửi thông tin phòng và tiện ích BBQ qua tin nhắn bị rời rạc, các thành viên khác dễ bàn lùi.
-Em có gửi anh/chị bản phân tích giải pháp gửi 1 link tổng thể để cả đoàn cùng xem và chốt cọc trong 15 phút${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? ` · Bản thử demo: ${demoUrl}` : ""}.
+        return `Chào anh/chị ${lead.businessName}, em thấy căn villa của mình rất đẹp và phù hợp cho khách đoàn nghỉ dưỡng.
+
+Tuy nhiên các deal villa giá trị cao thì người đại diện đoàn thường khó chốt vì gửi thông tin phòng và tiện ích BBQ qua tin nhắn bị rời rạc, các thành viên khác dễ bàn lùi.
+
+Em có gửi anh/chị bản phân tích giải pháp gửi 1 link tổng thể để cả đoàn cùng xem và chốt cọc trong 15 phút${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
+
 Anh/chị xem qua nhé!`;
       }
 
       return isLodging
         ? `Chào anh/chị ${lead.businessName}, em thấy bên mình đang có lượng khách tìm hiểu trên Maps rất đều.
-Em có gửi anh/chị bản phân tích giải pháp đặt phòng 1 chạm trực tiếp${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? ` · Bản thử: ${demoUrl}` : ""}.
+
+Em có gửi anh/chị bản phân tích giải pháp đặt phòng 1 chạm trực tiếp${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử: ${demoUrl})` : ""}.
+
 Nếu thấy tiện mình cùng trao đổi nhé!`
-        : `Chào anh/chị, em gửi anh/chị bản phân tích cơ hội tối ưu hiện diện số và tiếp cận khách hàng địa phương cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? ` · Bản thử demo: ${demoUrl}` : ""}.
+        : `Chào anh/chị, em gửi anh/chị bản phân tích cơ hội tối ưu hiện diện số và tiếp cận khách hàng địa phương cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
+
 Anh/chị xem qua để nắm các điểm có thể tối ưu chuyển đổi ngay nhé!`;
     }
 
-    return `Em chào anh/chị, bên em vừa dựng thử 1 bản demo giao diện xem thông tin & liên hệ 1 chạm cho ${lead.businessName}${demoUrl ? `: ${demoUrl}` : ""}${reportUrl ? ` (Kèm báo cáo: ${reportUrl})` : ""}.
+    return `Em chào anh/chị, bên em vừa dựng thử 1 bản demo giao diện xem thông tin & liên hệ 1 chạm cho ${lead.businessName}${demoUrl ? `: ${demoUrl}` : ""}${reportUrl ? `\n(Kèm báo cáo: ${reportUrl})` : ""}.
+
 Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé, nếu hướng này phù hợp em sẽ hỗ trợ cập nhật thêm!`;
   };
 
@@ -81,7 +113,7 @@ Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé,
         await recordOutreachSent({
           leadId: lead.id,
           channel,
-          summary: `Đã gửi tin nhắn mở đầu qua ${channel} (${style === "NATURAL" ? "Tự nhiên" : style === "VALUE" ? "Giá trị" : "Mời xem demo"})${reportUrl ? " kèm Báo cáo" : ""}${demoUrl ? " kèm Demo" : ""}`,
+          summary: `Đã gửi tin nhắn mở đầu qua ${channel} (${style === "WARM_UP" ? "Hỏi thăm Warm-up" : style === "NATURAL" ? "Tự nhiên" : style === "VALUE" ? "Giá trị" : "Mời xem demo"})${reportUrl ? " kèm Báo cáo" : ""}${demoUrl ? " kèm Demo" : ""}`,
         });
         setStatusNotice(`Đã ghi nhận gửi qua ${channel} & cập nhật CRM!`);
         setTimeout(() => setStatusNotice(null), 4000);
@@ -96,6 +128,12 @@ Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé,
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
     handleAction("COPY_LINK");
+  };
+
+  const handleCopyFriendNote = () => {
+    navigator.clipboard.writeText(friendRequestNote);
+    setCopiedFriendNote(true);
+    setTimeout(() => setCopiedFriendNote(false), 3000);
   };
 
   const handleZalo = () => {
@@ -132,6 +170,13 @@ Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé,
 
         {/* Style Selector */}
         <div className="flex items-center gap-1 rounded-xl bg-white p-1 border border-slate-200 text-xs">
+          <button
+            type="button"
+            onClick={() => setStyle("WARM_UP")}
+            className={`rounded-lg px-3 py-1 font-semibold transition ${style === "WARM_UP" ? "bg-[#da8d50] text-white" : "text-slate-600 hover:text-black"}`}
+          >
+            👋 Hỏi thăm (Warm-up)
+          </button>
           <button
             type="button"
             onClick={() => setStyle("NATURAL")}
@@ -184,7 +229,16 @@ Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé,
           disabled={isPending}
           className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 inline-flex items-center gap-1.5"
         >
-          <span>{copied ? "✓" : "📋"}</span> {copied ? "Đã sao chép!" : "Sao chép tin nhắn kèm Link"}
+          <span>{copied ? "✓" : "📋"}</span> {copied ? "Đã sao chép tin nhắn!" : "Sao chép tin nhắn kèm Link"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCopyFriendNote}
+          title="Sao chép lời chào ngắn <150 ký tự để dán khi gửi lời mời kết bạn Zalo"
+          className="rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2.5 text-sm font-medium text-amber-900 shadow-sm transition hover:bg-amber-100 inline-flex items-center gap-1.5"
+        >
+          <span>{copiedFriendNote ? "✓" : "🤝"}</span> {copiedFriendNote ? "Đã chép lời chào!" : "Chép lời chào Kết bạn Zalo"}
         </button>
 
         {cleanPhone && (
@@ -204,6 +258,7 @@ Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé,
       <div className="mt-3 rounded-xl bg-white/90 p-3.5 border border-slate-200 text-xs text-slate-700 leading-relaxed font-sans whitespace-pre-wrap">
         {message}
       </div>
+
 
       {/* Quick Access Badges & Links */}
       <div className="mt-3 flex flex-wrap items-center gap-3 pt-2 border-t border-amber-200/60 text-xs">

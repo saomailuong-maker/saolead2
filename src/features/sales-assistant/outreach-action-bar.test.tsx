@@ -22,9 +22,11 @@ describe("OutreachActionBar", () => {
       <OutreachActionBar lead={mockLead} publicReportToken="token123" demoSlug="demo456" />
     );
     expect(html).toContain("Công cụ Gửi Bán Tự Động 1-Click");
+    expect(html).toContain("Hỏi thăm (Warm-up)");
     expect(html).toContain("Nhắn Zalo 1-Click");
     expect(html).toContain("Messenger");
     expect(html).toContain("Sao chép tin nhắn kèm Link");
+    expect(html).toContain("Chép lời chào Kết bạn Zalo");
     expect(html).toContain("Gọi hotline");
     expect(html).toContain("token123");
     expect(html).toContain("demo456");

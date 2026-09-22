@@ -8,13 +8,23 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 export default async function Image({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params;
-  const access = await getPublicReport(token);
+  let businessName = "Doanh nghiệp địa phương";
+  let industry = "Cơ sở kinh doanh";
+  let location = "Đà Lạt · Lâm Đồng";
+  let isLodging = true;
 
-  const businessName = access.kind === "ACTIVE" ? access.snapshot.business.name : "Doanh nghiệp địa phương";
-  const industry = access.kind === "ACTIVE" ? (access.snapshot.business.industry || "Cơ sở kinh doanh") : "Cơ sở kinh doanh";
-  const location = access.kind === "ACTIVE" ? (access.snapshot.business.location || "Đà Lạt · Lâm Đồng") : "Lâm Đồng";
-  const isLodging = classifyReportIndustry(industry) === "LODGING";
+  try {
+    const { token } = await params;
+    const access = await getPublicReport(token);
+    if (access.kind === "ACTIVE") {
+      businessName = access.snapshot.business.name;
+      industry = access.snapshot.business.industry || "Cơ sở kinh doanh";
+      location = access.snapshot.business.location || "Đà Lạt · Lâm Đồng";
+      isLodging = classifyReportIndustry(industry) === "LODGING";
+    }
+  } catch {
+    // Graceful fallback if database or token resolution is delayed
+  }
 
   return new ImageResponse(
     (
@@ -28,29 +38,30 @@ export default async function Image({ params }: { params: Promise<{ token: strin
           padding: "60px 80px",
           background: "linear-gradient(135deg, #102a43 0%, #17324d 60%, #243b53 100%)",
           color: "white",
-          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontFamily: "sans-serif",
         }}
       >
         {/* Top bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div
               style={{
-                width: "44px",
-                height: "44px",
+                width: "46px",
+                height: "46px",
                 borderRadius: "12px",
                 backgroundColor: "#da8d50",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "24px",
+                fontSize: "20px",
                 fontWeight: "bold",
+                color: "#ffffff",
               }}
             >
-              ★
+              SB
             </div>
             <div style={{ fontSize: "22px", fontWeight: "bold", letterSpacing: "2px", color: "#f4c58b" }}>
-              SAO BÉO CONSULTING
+              SAO BÉO DIGITAL
             </div>
           </div>
           <div
@@ -75,11 +86,10 @@ export default async function Image({ params }: { params: Promise<{ token: strin
           </div>
           <div
             style={{
-              fontSize: "64px",
+              fontSize: "60px",
               fontWeight: "bold",
               lineHeight: 1.15,
               color: "#ffffff",
-              textShadow: "0 4px 20px rgba(0,0,0,0.3)",
             }}
           >
             {businessName}
@@ -104,7 +114,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
               fontWeight: "600",
             }}
           >
-            ✓ Thẩm định Google Maps & 4G
+            • Thẩm định Google Maps &amp; 4G
           </div>
           <div
             style={{
@@ -117,7 +127,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
               fontWeight: "600",
             }}
           >
-            ✓ Kèm bản thử giao diện tương tác
+            • Bản thử giao diện iPhone 16
           </div>
           <div
             style={{
@@ -130,7 +140,7 @@ export default async function Image({ params }: { params: Promise<{ token: strin
               fontWeight: "600",
             }}
           >
-            ✓ Tiết kiệm 15-20% phí sàn
+            • Giải pháp chốt cọc 1-chạm
           </div>
         </div>
       </div>

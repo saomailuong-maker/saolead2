@@ -18,3 +18,20 @@ const terms: Record<(typeof industries)[number], string> = {
 export function buildTextQuery(input: SearchBusinessesInput) {
   return `${terms[input.industry]}${input.keyword ? ` ${input.keyword}` : ""} ${input.location}`;
 }
+
+export const areaSubLocalities: Record<(typeof locations)[number], string[]> = {
+  "Đà Lạt": ["trung tâm", "Hồ Xuân Hương", "Trại Mát", "Tuyền Lâm", "Phường 1", "Phường 2", "Phường 8", "Cam Ly"],
+  "Đức Trọng": ["Liên Nghĩa", "sân bay Liên Khương", "Phú Hội", "Ninh Gia", "Tân Hội", "Bình Thạnh"],
+  "Bảo Lộc": ["trung tâm", "B'Lao", "Lộc Phát", "Lộc Tiến", "Lộc Sơn", "Đam B'ri"],
+  "Lâm Hà": ["Đinh Văn", "Nam Ban", "thác Voi", "Tân Hà"],
+  "Đơn Dương": ["Thạnh Mỹ", "D'Ran", "Ka Đô", "Ka Đơn"],
+  "Di Linh": ["trung tâm", "Gia Hiệp", "Hòa Ninh", "Hòa Nam"],
+  "Lạc Dương": ["Langbiang", "Lát", "Đạ Sar", "Đạ Nhim"],
+};
+
+export function buildDiversifiedQuery(input: SearchBusinessesInput, subLocality?: string) {
+  const baseTerm = terms[input.industry];
+  const customKey = input.keyword ? ` ${input.keyword}` : "";
+  const sub = subLocality ? ` ${subLocality}` : "";
+  return `${baseTerm}${customKey}${sub} ${input.location}`;
+}

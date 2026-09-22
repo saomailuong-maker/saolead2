@@ -12,7 +12,7 @@ describe("RapidApiPlacesTransport", () => {
     expect(result).toEqual([{ provider: "google_places", externalId: "ChIJabc123", name: "Mây Homestay", address: "Đà Lạt, Lâm Đồng", type: null, location: { latitude: 11.94646, longitude: 108.44193 }, locationQuality: { distanceKm: 0, accepted: true, reason: "WITHIN_AREA" } }]);
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0]?.[0]).toBe(RAPIDAPI_TEXT_SEARCH_URL);
-    expect(request.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-RapidAPI-Key": "test-key", "X-RapidAPI-Host": RAPIDAPI_EXPECTED_HOST, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location" });
+    expect(request.mock.calls[0]?.[1]?.headers).toMatchObject({ "X-RapidAPI-Key": "test-key", "X-RapidAPI-Host": RAPIDAPI_EXPECTED_HOST, "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location,nextPageToken" });
     const body = JSON.parse(String(request.mock.calls[0]?.[1]?.body));
     expect(body).toMatchObject({ textQuery: "homestay Đà Lạt", languageCode: "vi", regionCode: "VN", locationRestriction: { rectangle: { low: { latitude: expect.any(Number), longitude: expect.any(Number) }, high: { latitude: expect.any(Number), longitude: expect.any(Number) } } }, pageSize: 20 });
     expect(body.locationRestriction).not.toHaveProperty("circle"); expect(body).not.toHaveProperty("locationBias");

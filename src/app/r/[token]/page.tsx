@@ -1,19 +1,56 @@
-import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicReport } from "../../../features/public-audit/repository";
 import { PublicReportViewTracker } from "../../../features/public-audit/view-tracker";
 import { buildReportNarrative } from "../../../features/public-audit/presentation";
-export const dynamic="force-dynamic";export const revalidate=0;export const metadata:Metadata={title:"Phân tích hiện diện online | Sao Béo",robots:{index:false,follow:false,nocache:true}};
-const eyebrow="text-xs font-bold uppercase tracking-[0.2em] text-[#a65f35]";
-export default async function PublicAuditReportPage({params}:{params:Promise<{token:string}>}){const{token}=await params;const access=await getPublicReport(token);if(access.kind==="NOT_FOUND")notFound();if(access.kind!=="ACTIVE")return <main className="mx-auto min-h-screen max-w-3xl px-5 py-20"><div className="rounded-3xl border bg-white p-8 text-center shadow-sm"><div className="font-bold tracking-[.2em] text-[#8a5b35]">SAO BÉO</div><h1 className="mt-8 text-2xl font-bold">{access.kind==="REVOKED"?"Báo cáo này không còn khả dụng.":"Báo cáo này đã hết hạn."}</h1><p className="mt-3 text-slate-500">Vui lòng liên hệ người gửi nếu anh/chị cần một bản cập nhật.</p></div></main>;const report=access.snapshot;const n=buildReportNarrative(report);return <main className="min-h-screen bg-[#f3efe8] text-[#26313a]"><PublicReportViewTracker token={token}/><article className="mx-auto max-w-5xl px-4 py-8 md:px-6 md:py-14">
-<header className="relative overflow-hidden rounded-[2rem] bg-[#17324d] px-7 py-12 text-white shadow-2xl md:px-14 md:py-16"><div className="absolute -right-20 -top-24 h-96 w-96 rounded-full bg-[#da8d50]/20 blur-3xl"/><div className="relative max-w-4xl"><p className="text-sm font-bold tracking-[.24em] text-[#f4c58b]">SAO BÉO · BẢN TƯ VẤN RIÊNG</p><p className="mt-12 text-xs font-semibold uppercase tracking-[.18em] text-slate-300">{report.business.industry||"Doanh nghiệp địa phương"}{report.business.location?` · ${report.business.location}`:""}</p><h1 className="mt-4 text-4xl font-bold leading-tight md:text-6xl">{report.business.name}</h1><p className="mt-6 max-w-3xl text-lg leading-8 text-slate-200">{n.headline}</p><div className="mt-8 flex flex-wrap gap-2">{n.statusChips.map(chip=><span className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm" key={chip}>{chip}</span>)}</div></div></header>
-<section className="relative -mt-6 mx-3 rounded-3xl bg-white p-7 shadow-xl md:mx-8 md:p-10"><p className={eyebrow}>Bối cảnh doanh nghiệp</p><p className="mt-3 leading-7 text-slate-600">{n.businessContext}</p><h2 className="mt-6 text-2xl font-bold md:text-3xl">{report.summary.headline}</h2><p className="mt-4 leading-7 text-slate-600">{n.executiveSummary}</p></section>
-<section className="mt-8 rounded-3xl bg-white p-7 shadow-sm md:p-10"><p className={eyebrow}>01 / Bên mình đang làm tốt gì?</p><div className="mt-6 grid gap-4 md:grid-cols-2">{n.currentStrengths.map((item,index)=><div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-6" key={item.title}><span className="text-sm font-bold text-emerald-700">0{index+1}</span><h2 className="mt-2 text-xl font-bold">{item.title}</h2><p className="mt-2 leading-7 text-slate-600">{item.detail}</p></div>)}</div></section>
-<section className="mt-8 rounded-3xl bg-[#17324d] p-7 text-white shadow-lg md:p-10"><p className="text-xs font-bold uppercase tracking-[.2em] text-[#f4c58b]">02 / Khách hàng hiện đang trải nghiệm thế nào?</p><div className="mt-8 flex flex-col items-stretch gap-2 md:flex-row md:items-center">{n.customerJourney.map((step,index)=><div className="contents" key={step}><div className="flex-1 rounded-2xl bg-white/10 px-4 py-4 text-center text-sm font-semibold">{step}</div>{index<n.customerJourney.length-1&&<span className="text-center text-[#f4c58b]"><span className="md:hidden">↓</span><span className="hidden md:inline">→</span></span>}</div>)}</div></section>
-<section className="mt-8 rounded-3xl bg-white p-7 shadow-sm md:p-10"><p className={eyebrow}>03 / Điểm còn có thể tối ưu</p><div className="mt-6 grid gap-4 md:grid-cols-2">{n.gaps.map(item=><div className="rounded-2xl border border-[#eadfce] p-6" key={item.title}><h2 className="text-lg font-bold">{item.title}</h2><p className="mt-2 leading-7 text-slate-600">{item.detail}</p></div>)}</div></section>
-<section className="mt-8 rounded-3xl bg-white p-7 shadow-sm md:p-10"><p className={eyebrow}>04 / Nếu bổ sung website hoặc tối ưu demo, giá trị nằm ở đâu?</p><div className="mt-7 grid gap-4 sm:grid-cols-2">{n.valueHypotheses.map((item,index)=><div className="rounded-2xl bg-[#faf6ef] p-6" key={item.title}><span className="text-xs font-bold text-[#a65f35]">0{index+1}</span><h2 className="mt-2 text-xl font-bold">{item.title}</h2><p className="mt-2 leading-7 text-slate-600">{item.detail}</p></div>)}</div></section>
-<section className="mt-8 rounded-3xl bg-white p-7 shadow-sm md:p-10"><p className={eyebrow}>05 / Phương án phù hợp nhất</p><ol className="mt-7 space-y-5">{n.recommendedPlan.map(item=><li className="flex gap-5" key={item.step}><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#17324d] font-bold text-white">{item.step}</span><div><h2 className="text-lg font-bold">{item.title}</h2><p className="mt-1 leading-7 text-slate-600">{item.detail}</p></div></li>)}</ol></section>
-{access.conceptImagePath&&<section id="concept" className="mt-8 overflow-hidden rounded-[2rem] bg-[#211b17] text-white shadow-xl"><div className="p-7 md:p-10"><p className="text-xs font-bold uppercase tracking-[.2em] text-[#f4c58b]">06 / Concept giao diện</p><h2 className="mt-3 text-3xl font-bold">Một hướng hình ảnh để mình dễ hình dung trước</h2><p className="mt-3 text-slate-300">Đây là hình minh họa phong cách, không phải ảnh thật của cơ sở hoặc website chính thức.</p></div><div className="relative aspect-[3/2]"><Image src={access.conceptImagePath} fill sizes="(max-width: 1024px) 100vw, 960px" className="object-cover" alt={`Hình minh họa concept cho ${report.business.name}`}/></div></section>}
-<section className="mt-8 rounded-[2rem] bg-[#e6c49c] p-7 text-center shadow-lg md:p-12"><p className={eyebrow}>07 / Bước tiếp theo</p><h2 className="mx-auto mt-4 max-w-3xl text-3xl font-bold">{n.primaryCTA}</h2><p className="mx-auto mt-4 max-w-2xl leading-7 text-slate-700">Nếu hướng này phù hợp với mục tiêu của anh/chị, mình có thể trao đổi tiếp từ thông tin thật của cơ sở; chưa cần quyết định ngay.</p><div className="mt-8 flex flex-wrap justify-center gap-3">{access.conceptImagePath&&<a className="rounded-full border border-[#17324d] px-7 py-3.5 font-bold text-[#17324d]" href="#concept">Xem concept giao diện</a>}{access.demoSlug&&<a className="rounded-full bg-[#17324d] px-7 py-3.5 font-bold text-white shadow-lg" href={`/demo/${access.demoSlug}`}>Mở demo tương tác</a>}{!access.demoSlug&&!access.conceptImagePath&&process.env.PUBLIC_CONTACT_TEXT&&<span className="rounded-full bg-[#17324d] px-7 py-3.5 font-bold text-white">{n.secondaryCTA} · {process.env.PUBLIC_CONTACT_TEXT}</span>}</div></section>
-<footer className="py-10 text-center text-sm text-slate-500"><p>Báo cáo được chuẩn bị bởi {process.env.PUBLIC_BRAND_NAME||"Sao Béo"}</p><p className="mt-2">Tạo ngày {new Date(report.generatedAt).toLocaleDateString("vi-VN")}</p></footer></article>{access.demoSlug&&<a className="fixed inset-x-4 bottom-4 z-30 rounded-full bg-[#17324d] px-5 py-3.5 text-center font-bold text-white shadow-xl md:hidden" href={`/demo/${access.demoSlug}`}>Mở demo tương tác</a>}</main>}
+import { PublicAuditReportView } from "../../../features/public-audit/report-view";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const metadata: Metadata = {
+  title: "Báo cáo Thẩm định Hiện diện Số | Sao Béo",
+  robots: { index: false, follow: false, nocache: true },
+};
+
+export default async function PublicAuditReportPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { token } = await params;
+  const access = await getPublicReport(token);
+  if (access.kind === "NOT_FOUND") notFound();
+  if (access.kind !== "ACTIVE") {
+    return (
+      <main className="mx-auto min-h-screen max-w-3xl px-5 py-20">
+        <div className="rounded-3xl border bg-white p-8 text-center shadow-sm">
+          <div className="font-bold tracking-[.2em] text-[#8a5b35]">SAO BÉO</div>
+          <h1 className="mt-8 text-2xl font-bold">
+            {access.kind === "REVOKED"
+              ? "Báo cáo này không còn khả dụng."
+              : "Báo cáo này đã hết hạn."}
+          </h1>
+          <p className="mt-3 text-slate-500">
+            Vui lòng liên hệ chuyên viên tư vấn nếu anh/chị cần một bản cập nhật mới nhất.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  const report = access.snapshot;
+  const narrative = buildReportNarrative(report);
+
+  return (
+    <main className="min-h-screen bg-[#faf7f2] text-[#242e38] font-sans pb-16">
+      <PublicReportViewTracker token={token} />
+      <PublicAuditReportView
+        token={token}
+        report={report}
+        narrative={narrative}
+        demoSlug={access.demoSlug}
+        conceptImagePath={access.conceptImagePath}
+      />
+    </main>
+  );
+}

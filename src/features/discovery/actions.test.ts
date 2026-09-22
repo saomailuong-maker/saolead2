@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  findSession: vi.fn(), findInbox: vi.fn(), createInbox: vi.fn(), findQualified: vi.fn(), updateInbox: vi.fn(), findDiscovered: vi.fn(), findProviderLog: vi.fn(), createProviderLog: vi.fn(), transaction: vi.fn(), revalidate: vi.fn(), getDetails: vi.fn(),
+  findSession: vi.fn(), findInbox: vi.fn(), createInbox: vi.fn(), findQualified: vi.fn(), updateInbox: vi.fn(), findDiscovered: vi.fn(), findProviderLog: vi.fn(), createProviderLog: vi.fn(), transaction: vi.fn(), revalidate: vi.fn(), getDetails: vi.fn(), findManySessions: vi.fn(),
 }));
 vi.mock("../../lib/auth", () => ({ requireActor: async () => ({ workspaceId: "workspace-1", user: { id: "user-1" } }) }));
-vi.mock("../../lib/db", () => ({ db: { searchSession: { findFirst: mocks.findSession }, providerRequestLog: { findFirst: mocks.findProviderLog, create: mocks.createProviderLog }, discoveredBusiness: { findUnique: mocks.findInbox, create: mocks.createInbox, findFirst: mocks.findQualified, findMany: mocks.findDiscovered, updateMany: mocks.updateInbox }, $transaction: mocks.transaction } }));
+vi.mock("../../lib/db", () => ({ db: { searchSession: { findFirst: mocks.findSession, findMany: mocks.findManySessions }, providerRequestLog: { findFirst: mocks.findProviderLog, create: mocks.createProviderLog }, discoveredBusiness: { findUnique: mocks.findInbox, create: mocks.createInbox, findFirst: mocks.findQualified, findMany: mocks.findDiscovered, updateMany: mocks.updateInbox }, $transaction: mocks.transaction } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ redirect: (path: string) => { throw new Error(`redirect:${path}`); } }));
 vi.mock("./provider", async (importOriginal) => { const actual = await importOriginal<typeof import("./provider")>(); return { ...actual, PlacesService: class { transportName = "rapidapi"; getDetails = mocks.getDetails; } }; });
 
-import { addToInbox, createCrmLeadFromInbox, restoreSearchSession, setInboxStatus } from "./actions";
+import { addToInbox, createCrmLeadFromInbox, getRecentSearchSessions, restoreSearchSession, setInboxStatus } from "./actions";
 const inboxForm = () => { const form = new FormData(); form.set("sessionId", "00000000-0000-4000-8000-000000000001"); form.set("externalId", "ChIJabc123"); return form; };
 
 describe("discovery actions", () => {
@@ -31,4 +31,13 @@ describe("discovery actions", () => {
   });
   it("restores only a current-workspace session without calling the provider", async () => { const id = "00000000-0000-4000-8000-000000000001"; mocks.findSession.mockResolvedValue({ id, resultsJson: [{ provider: "google_places", externalId: "ChIJabc123", name: "Mây Homestay", address: "Đà Lạt, Lâm Đồng", type: null, location: { latitude: 11.94646, longitude: 108.44193 }, locationQuality: { distanceKm: 0, accepted: true, reason: "WITHIN_AREA" } }] }); mocks.findDiscovered.mockResolvedValue([{ externalId: "ChIJabc123" }]); await expect(restoreSearchSession(id)).resolves.toMatchObject({ sessionId: id, results: [expect.objectContaining({ externalId: "ChIJabc123", inInbox: true })] }); expect(mocks.findSession).toHaveBeenCalledWith({ where: { id, workspaceId: "workspace-1", provider: "google_places" } }); expect(mocks.getDetails).not.toHaveBeenCalled(); });
   it("does not restore another workspace's session", async () => { mocks.findSession.mockResolvedValue(null); await expect(restoreSearchSession("00000000-0000-4000-8000-000000000001")).resolves.toEqual({ results: [] }); expect(mocks.findDiscovered).not.toHaveBeenCalled(); });
+  it("returns recent search sessions for the workspace", async () => {
+    mocks.findManySessions.mockResolvedValue([
+      { id: "s-1", location: "Đà Lạt", industry: "Homestay", query: "homestay Đà Lạt", resultCount: 20, mode: "STANDARD", searchStats: null, createdAt: new Date() },
+    ]);
+    const history = await getRecentSearchSessions(5);
+    expect(history).toHaveLength(1);
+    expect(history[0]?.id).toBe("s-1");
+    expect(mocks.findManySessions).toHaveBeenCalledWith(expect.objectContaining({ take: 5 }));
+  });
 });

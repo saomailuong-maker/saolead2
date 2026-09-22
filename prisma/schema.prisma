@@ -91,6 +91,7 @@ model Workspace {
   outreachDrafts OutreachDraft[]
   publicAuditReports PublicAuditReport[]
   leadDemos LeadDemo[]
+  discoverySeenPlaces DiscoverySeenPlace[]
   createdAt DateTime @default(now())
 }
 
@@ -193,6 +194,9 @@ model SearchSession {
   resultCount Int
   resultPlaceIds String[]
   resultsJson Json?
+  nextPageToken String?
+  mode String? @default("STANDARD")
+  searchStats Json?
   createdAt DateTime @default(now())
   discoveredBusinesses DiscoveredBusiness[]
   providerRequestLogs ProviderRequestLog[]
@@ -372,4 +376,23 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([assignedToId, status, dueAt])
+}
+
+model DiscoverySeenPlace {
+  id String @id @default(uuid()) @db.Uuid
+  workspaceId String @db.Uuid
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider String
+  externalId String
+  name String?
+  address String?
+  location String
+  industry String
+  seenCount Int @default(1)
+  firstSeenAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  lastSearchSessionId String? @db.Uuid
+  @@unique([workspaceId, provider, externalId])
+  @@index([workspaceId, location, industry])
+  @@index([workspaceId, provider, externalId])
 }

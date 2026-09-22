@@ -11,44 +11,238 @@ import { PlacesConfigError, PlacesService, PlacesTransportError, businessSearchR
 import { diagnosticsFromError, providerDiagnosticsSchema } from "./diagnostics";
 import { buildTextQuery, searchInputSchema } from "./query";
 import { canAddToInbox } from "./inbox";
+import { recordSeenPlaces, resolvePlacesStatus, type EnrichedSearchResult, type PlaceDiscoveryStatus } from "./seen-places";
+import { executeFindNewLeads, type FindNewLeadsStats } from "./find-new";
 
-export type SearchState = { error?: "provider" | "input"; diagnostics?: ProviderDiagnostics; sessionId?: string; location?: string; industry?: string; results: (BusinessSearchResult & { inInbox: boolean })[] };
+export type { PlaceDiscoveryStatus, EnrichedSearchResult };
+
+export type SearchState = {
+  error?: "provider" | "input";
+  diagnostics?: ProviderDiagnostics;
+  sessionId?: string;
+  location?: string;
+  industry?: string;
+  mode?: "STANDARD" | "FIND_NEW";
+  searchStats?: FindNewLeadsStats;
+  results: EnrichedSearchResult[];
+};
+
 const field = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
 
 async function saveProviderLog(workspaceId: string, diagnostics: ProviderDiagnostics, searchSessionId?: string) {
   try {
-    await db.providerRequestLog.create({ data: { workspaceId, searchSessionId, transport: diagnostics.transport, operation: diagnostics.operation, status: diagnostics.status, errorKind: diagnostics.errorKind, httpStatus: diagnostics.httpStatus, providerCode: diagnostics.providerCode, providerMessage: diagnostics.providerMessage, durationMs: diagnostics.durationMs, ...(diagnostics.quota ? { quota: diagnostics.quota as Prisma.InputJsonValue } : {}) } });
-  } catch (error) { console.error(JSON.stringify({ event: "provider_telemetry_persist_failed", message: error instanceof Error ? error.message.slice(0, 120) : "unknown" })); }
+    await db.providerRequestLog.create({
+      data: {
+        workspaceId,
+        searchSessionId,
+        transport: diagnostics.transport,
+        operation: diagnostics.operation,
+        status: diagnostics.status,
+        errorKind: diagnostics.errorKind,
+        httpStatus: diagnostics.httpStatus,
+        providerCode: diagnostics.providerCode,
+        providerMessage: diagnostics.providerMessage,
+        durationMs: diagnostics.durationMs,
+        ...(diagnostics.quota ? { quota: diagnostics.quota as Prisma.InputJsonValue } : {}),
+      },
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ event: "provider_telemetry_persist_failed", message: error instanceof Error ? error.message.slice(0, 120) : "unknown" }));
+  }
+}
+
+export type SearchHistoryItem = {
+  id: string;
+  location: string;
+  industry: string;
+  query: string;
+  resultCount: number;
+  mode: string | null;
+  searchStats: FindNewLeadsStats | null;
+  createdAt: Date;
+};
+
+export async function getRecentSearchSessions(limit = 8): Promise<SearchHistoryItem[]> {
+  const actor = await requireActor();
+  const sessions = await db.searchSession.findMany({
+    where: {
+      workspaceId: actor.workspaceId,
+      provider: "google_places",
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      location: true,
+      industry: true,
+      query: true,
+      resultCount: true,
+      mode: true,
+      searchStats: true,
+      createdAt: true,
+    },
+  });
+  return sessions.map((s) => ({
+    ...s,
+    searchStats: (s.searchStats as FindNewLeadsStats | null) ?? null,
+  }));
 }
 
 export async function restoreSearchSession(sessionId: string): Promise<SearchState> {
-  const actor = await requireActor(); const parsedId = z.string().uuid().safeParse(sessionId);
+  const actor = await requireActor();
+  const parsedId = z.string().uuid().safeParse(sessionId);
   if (!parsedId.success) return { results: [], error: "input" };
-  const session = await db.searchSession.findFirst({ where: { id: parsedId.data, workspaceId: actor.workspaceId, provider: "google_places" } });
+  const session = await db.searchSession.findFirst({
+    where: { id: parsedId.data, workspaceId: actor.workspaceId, provider: "google_places" },
+  });
   if (!session) return { results: [] };
   const parsedResults = z.array(businessSearchResultSchema).safeParse(session.resultsJson);
   if (!parsedResults.success) return { sessionId: session.id, results: [] };
-  const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: parsedResults.data.map((result) => result.externalId) } }, select: { externalId: true } });
-  const log = await db.providerRequestLog.findFirst({ where: { workspaceId: actor.workspaceId, searchSessionId: session.id }, orderBy: { createdAt: "desc" } });
-  const parsedDiagnostics = providerDiagnosticsSchema.safeParse(log ? { transport: log.transport, operation: log.operation, status: log.status, errorKind: log.errorKind, httpStatus: log.httpStatus, providerCode: log.providerCode, providerMessage: log.providerMessage, durationMs: log.durationMs, quota: log.quota } : null);
-  const seen = new Set(existing.map((result) => result.externalId));
-  return { sessionId: session.id, location: session.location, industry: session.industry, ...(parsedDiagnostics.success ? { diagnostics: parsedDiagnostics.data } : {}), results: parsedResults.data.map((result) => ({ ...result, inInbox: seen.has(result.externalId) })) };
+  const log = await db.providerRequestLog.findFirst({
+    where: { workspaceId: actor.workspaceId, searchSessionId: session.id },
+    orderBy: { createdAt: "desc" },
+  });
+  const parsedDiagnostics = providerDiagnosticsSchema.safeParse(
+    log
+      ? {
+          transport: log.transport,
+          operation: log.operation,
+          status: log.status,
+          errorKind: log.errorKind,
+          httpStatus: log.httpStatus,
+          providerCode: log.providerCode,
+          providerMessage: log.providerMessage,
+          durationMs: log.durationMs,
+          quota: log.quota,
+        }
+      : null
+  );
+  const enrichedResults = await resolvePlacesStatus(actor.workspaceId, parsedResults.data);
+  return {
+    sessionId: session.id,
+    location: session.location,
+    industry: session.industry,
+    mode: (session.mode as "STANDARD" | "FIND_NEW") ?? "STANDARD",
+    searchStats: (session.searchStats as FindNewLeadsStats | null) ?? undefined,
+    ...(parsedDiagnostics.success ? { diagnostics: parsedDiagnostics.data } : {}),
+    results: enrichedResults,
+  };
 }
 
 export async function searchBusinesses(_previous: SearchState, form: FormData): Promise<SearchState> {
   const actor = await requireActor();
-  const parsed = searchInputSchema.safeParse({ location: field(form, "location"), industry: field(form, "industry"), keyword: field(form, "keyword"), maxResults: field(form, "maxResults") });
+  const actionType = field(form, "actionType") === "find_new" ? "find_new" : "standard";
+  const parsed = searchInputSchema.safeParse({
+    location: field(form, "location"),
+    industry: field(form, "industry"),
+    keyword: field(form, "keyword"),
+    maxResults: field(form, "maxResults"),
+  });
   if (!parsed.success) return { results: [], error: "input" };
+
   try {
     const provider = new PlacesService();
-    const results = await provider.search(parsed.data);
-    const session = await db.searchSession.create({ data: { workspaceId: actor.workspaceId, provider: "google_places", query: buildTextQuery(parsed.data), location: parsed.data.location, industry: parsed.data.industry, resultCount: results.length, resultPlaceIds: results.map((r) => r.externalId), resultsJson: results } });
-    const diagnostics = provider.lastDiagnostics ?? { transport: provider.transportName, operation: "text_search" as const, status: "SUCCESS" as const, errorKind: null, httpStatus: 200, providerCode: null, providerMessage: null, durationMs: null, quota: null };
+
+    if (actionType === "find_new") {
+      const findResult = await executeFindNewLeads({
+        workspaceId: actor.workspaceId,
+        input: parsed.data,
+        provider,
+        maxRequestsLimit: 3,
+        targetNewCount: parsed.data.maxResults,
+      });
+
+      const session = await db.searchSession.create({
+        data: {
+          workspaceId: actor.workspaceId,
+          provider: "google_places",
+          query: buildTextQuery(parsed.data),
+          location: parsed.data.location,
+          industry: parsed.data.industry,
+          resultCount: findResult.newPlaces.length,
+          resultPlaceIds: findResult.newPlaces.map((r) => r.externalId),
+          resultsJson: findResult.newPlaces,
+          nextPageToken: findResult.nextPageToken,
+          mode: "FIND_NEW",
+          searchStats: findResult.stats as Prisma.InputJsonValue,
+        },
+      });
+
+      const diagnostics = findResult.diagnostics ?? {
+        transport: provider.transportName,
+        operation: "text_search" as const,
+        status: "SUCCESS" as const,
+        errorKind: null,
+        httpStatus: 200,
+        providerCode: null,
+        providerMessage: null,
+        durationMs: null,
+        quota: null,
+      };
+      await saveProviderLog(actor.workspaceId, diagnostics, session.id);
+
+      await recordSeenPlaces(actor.workspaceId, findResult.newPlaces, parsed.data.location, parsed.data.industry, session.id);
+      const enrichedResults = await resolvePlacesStatus(
+        actor.workspaceId,
+        findResult.newPlaces,
+        new Set(findResult.newPlaces.map((p) => p.externalId))
+      );
+
+      console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", mode: "find_new", workspace_id: actor.workspaceId, result_count: findResult.newPlaces.length, stats: findResult.stats, status: "ok" }));
+      return {
+        sessionId: session.id,
+        location: parsed.data.location,
+        industry: parsed.data.industry,
+        mode: "FIND_NEW",
+        searchStats: findResult.stats,
+        diagnostics,
+        results: enrichedResults,
+      };
+    }
+
+    // Standard search
+    const searchRes = await provider.searchWithPagination(parsed.data);
+    const results = searchRes.results;
+    const session = await db.searchSession.create({
+      data: {
+        workspaceId: actor.workspaceId,
+        provider: "google_places",
+        query: buildTextQuery(parsed.data),
+        location: parsed.data.location,
+        industry: parsed.data.industry,
+        resultCount: results.length,
+        resultPlaceIds: results.map((r) => r.externalId),
+        resultsJson: results,
+        nextPageToken: searchRes.nextPageToken,
+        mode: "STANDARD",
+      },
+    });
+
+    const diagnostics = provider.lastDiagnostics ?? {
+      transport: provider.transportName,
+      operation: "text_search" as const,
+      status: "SUCCESS" as const,
+      errorKind: null,
+      httpStatus: 200,
+      providerCode: null,
+      providerMessage: null,
+      durationMs: null,
+      quota: null,
+    };
     await saveProviderLog(actor.workspaceId, diagnostics, session.id);
-    const existing = await db.discoveredBusiness.findMany({ where: { workspaceId: actor.workspaceId, provider: "google_places", externalId: { in: results.map((r) => r.externalId) } }, select: { externalId: true } });
-    const seen = new Set(existing.map((r) => r.externalId));
-    console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
-    return { sessionId: session.id, location: parsed.data.location, industry: parsed.data.industry, diagnostics, results: results.map((r) => ({ ...r, inInbox: seen.has(r.externalId) })) };
+
+    await recordSeenPlaces(actor.workspaceId, results, parsed.data.location, parsed.data.industry, session.id);
+    const enrichedResults = await resolvePlacesStatus(actor.workspaceId, results);
+
+    console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", mode: "standard", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
+    return {
+      sessionId: session.id,
+      location: parsed.data.location,
+      industry: parsed.data.industry,
+      mode: "STANDARD",
+      diagnostics,
+      results: enrichedResults,
+    };
   } catch (error) {
     const diagnostics = diagnosticsFromError(error);
     await saveProviderLog(actor.workspaceId, diagnostics);
@@ -57,6 +251,7 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
     return { results: [], error: "provider", diagnostics };
   }
 }
+
 
 export async function addToInbox(form: FormData) {
   const actor = await requireActor();

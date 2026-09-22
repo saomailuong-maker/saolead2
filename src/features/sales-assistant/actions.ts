@@ -49,3 +49,55 @@ export async function saveOutreachDraft(form: FormData) {
   await db.outreachDraft.updateMany({ where: { id: draftId, leadId, workspaceId: actor.workspaceId }, data: { output: edited.data as unknown as Prisma.InputJsonValue, status: "EDITED" } });
   redirect(`/leads/${leadId}?sales=saved`);
 }
+
+export async function recordOutreachSent(data: {
+  leadId: string;
+  channel: "ZALO" | "FACEBOOK" | "CALL" | "COPY_LINK";
+  summary: string;
+}) {
+  const actor = await requireActor();
+  const leadId = idSchema.parse(data.leadId);
+
+  const actType = data.channel === "ZALO" ? "ZALO" : data.channel === "FACEBOOK" ? "FACEBOOK" : data.channel === "CALL" ? "CALL" : "NOTE";
+  await db.activity.create({
+    data: {
+      leadId,
+      userId: actor.user.id,
+      type: actType,
+      summary: data.summary,
+    },
+  });
+
+  const currentLead = await db.lead.findFirst({
+    where: { id: leadId, workspaceId: actor.workspaceId },
+    select: { stage: true, businessName: true },
+  });
+
+  if (currentLead && (currentLead.stage === "NEW" || currentLead.stage === "QUALIFIED")) {
+    await db.lead.updateMany({
+      where: { id: leadId, workspaceId: actor.workspaceId },
+      data: { stage: "CONTACTED" },
+    });
+  }
+
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const existingOpenTask = await db.task.findFirst({
+    where: { leadId, status: "OPEN" },
+  });
+
+  if (!existingOpenTask && currentLead) {
+    await db.task.create({
+      data: {
+        leadId,
+        assignedToId: actor.user.id,
+        title: `Follow-up phản hồi tiếp cận ${data.channel} của ${currentLead.businessName}`,
+        priority: "MEDIUM",
+        dueAt: tomorrow,
+      },
+    });
+  }
+
+
+  return { success: true };
+}
+

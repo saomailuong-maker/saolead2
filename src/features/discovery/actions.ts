@@ -309,3 +309,127 @@ export async function createCrmLeadFromInbox(form: FormData) {
   revalidatePath("/lead-inbox"); revalidatePath("/leads");
   redirect(`/leads/${lead.id}`);
 }
+
+export async function bulkImportToCrm(input: {
+  sessionId: string;
+  externalIds: string[];
+}): Promise<{ success: boolean; importedCount: number; skippedCount: number; leadIds: string[]; error?: string }> {
+  const actor = await requireActor();
+  const sessionId = z.string().uuid().parse(input.sessionId);
+  const externalIds = z.array(z.string().min(5).max(200)).min(1).max(50).parse(input.externalIds);
+
+  const session = await db.searchSession.findFirst({
+    where: { id: sessionId, workspaceId: actor.workspaceId, provider: "google_places" },
+  });
+  if (!session) return { success: false, importedCount: 0, skippedCount: 0, leadIds: [], error: "Session không hợp lệ" };
+
+  const sessionResults = Array.isArray(session.resultsJson)
+    ? (session.resultsJson as unknown as BusinessSearchResult[])
+    : [];
+
+  const existingLeads = await db.lead.findMany({
+    where: {
+      workspaceId: actor.workspaceId,
+      sourceExternalId: { in: externalIds },
+    },
+    select: { sourceExternalId: true },
+  });
+  const existingSet = new Set(existingLeads.map((l) => l.sourceExternalId).filter(Boolean));
+
+  const toImportIds = externalIds.filter((id) => !existingSet.has(id));
+  const skippedCount = externalIds.length - toImportIds.length;
+
+  if (toImportIds.length === 0) {
+    return { success: true, importedCount: 0, skippedCount, leadIds: [] };
+  }
+
+  const provider = new PlacesService();
+  const leadIds: string[] = [];
+
+  for (const externalId of toImportIds) {
+    const basic = sessionResults.find((r) => r && typeof r === "object" && r.externalId === externalId);
+    let details: Awaited<ReturnType<PlacesService["getDetails"]>> | null = null;
+    let detailsErrorCode: string | null = null;
+
+    try {
+      details = await provider.getDetails(externalId);
+    } catch (err) {
+      detailsErrorCode = err instanceof PlacesTransportError ? err.providerCode : "DETAILS_FAILED";
+    }
+
+    const businessName = details?.name ?? basic?.name ?? "Doanh nghiệp chưa đặt tên";
+    const address = details?.address ?? basic?.address ?? session.location;
+    const phone = details?.phone ?? null;
+    const websiteUrl = details?.websiteUrl ?? null;
+
+    try {
+      const disc = await db.discoveredBusiness.upsert({
+        where: { provider_externalId: { provider: "google_places", externalId } },
+        update: {
+          status: "CRM_CREATED",
+          phone: phone ?? undefined,
+          websiteUrl: websiteUrl ?? undefined,
+          rating: details?.rating ?? undefined,
+          reviewCount: details?.reviewCount ?? undefined,
+          detailsStatus: details ? "SUCCESS" : "FAILED",
+        },
+        create: {
+          workspaceId: actor.workspaceId,
+          provider: "google_places",
+          externalId,
+          name: businessName,
+          address,
+          industry: session.industry,
+          location: session.location,
+          phone,
+          websiteUrl,
+          rating: details?.rating ?? null,
+          reviewCount: details?.reviewCount ?? null,
+          businessStatus: details?.businessStatus ?? null,
+          detailsStatus: details ? "SUCCESS" : "FAILED",
+          detailsFetchedAt: new Date(),
+          detailsErrorCode,
+          status: "CRM_CREATED",
+          searchSessionId: session.id,
+        },
+      });
+
+      const createdLead = await db.lead.create({
+        data: {
+          workspaceId: actor.workspaceId,
+          ownerUserId: actor.user.id,
+          businessName,
+          businessNameNormalized: normalizeName(businessName),
+          industry: session.industry,
+          locationText: address,
+          phone,
+          websiteUrl,
+          sourceType: "google_places_bulk_import",
+          sourceExternalId: externalId,
+          stage: "NEW",
+        },
+      });
+
+      await db.discoveredBusiness.update({
+        where: { id: disc.id },
+        data: { crmLeadId: createdLead.id },
+      });
+
+      leadIds.push(createdLead.id);
+    } catch (err) {
+      console.error(`Failed to import lead for ${externalId}:`, err);
+    }
+  }
+
+  revalidatePath("/discover");
+  revalidatePath("/lead-inbox");
+  revalidatePath("/leads");
+  revalidatePath("/outreach");
+
+  return {
+    success: true,
+    importedCount: leadIds.length,
+    skippedCount,
+    leadIds,
+  };
+}

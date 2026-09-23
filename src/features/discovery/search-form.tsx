@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { addToInbox, searchBusinesses, type PlaceDiscoveryStatus, type SearchState } from "./actions";
+import Link from "next/link";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { addToInbox, bulkImportToCrm, searchBusinesses, type PlaceDiscoveryStatus, type SearchState } from "./actions";
 import { diagnosticsMessage, preferredQuota } from "./diagnostics";
 import { industries, locations } from "./query";
 import type { EnrichedSearchResult } from "./seen-places";
@@ -45,6 +46,9 @@ function renderStatusBadge(status?: PlaceDiscoveryStatus, seenCount?: number) {
 export function SearchForm({ initialState = { results: [] } }: { initialState?: SearchState }) {
   const [state, action, pending] = useActionState(searchBusinesses, initialState);
   const [inspectingPlace, setInspectingPlace] = useState<EnrichedSearchResult | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkPending, startBulkTransition] = useTransition();
+  const [bulkResult, setBulkResult] = useState<{ imported: number; skipped: number } | null>(null);
   const quota = preferredQuota(state.diagnostics?.quota ?? null);
 
   useEffect(() => {
@@ -52,6 +56,49 @@ export function SearchForm({ initialState = { results: [] } }: { initialState?: 
       window.history.replaceState(null, "", `/discover?session=${encodeURIComponent(state.sessionId)}`);
     }
   }, [state.sessionId]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setBulkResult(null);
+  }, [state.sessionId]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    if (selectedIds.size === state.results.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(state.results.map((r) => r.externalId)));
+    }
+  };
+
+  const selectOnlyNew = () => {
+    const newPlaceIds = state.results
+      .filter((r) => r.discoveryStatus !== "CRM" && r.discoveryStatus !== "REJECTED")
+      .map((r) => r.externalId);
+    setSelectedIds(new Set(newPlaceIds));
+  };
+
+  const handleBulkImport = () => {
+    if (!state.sessionId || selectedIds.size === 0) return;
+    startBulkTransition(async () => {
+      const res = await bulkImportToCrm({
+        sessionId: state.sessionId!,
+        externalIds: Array.from(selectedIds),
+      });
+      if (res.success) {
+        setBulkResult({ imported: res.importedCount, skipped: res.skippedCount });
+        setSelectedIds(new Set());
+      }
+    });
+  };
 
   return (
     <div className="space-y-5">
@@ -190,7 +237,26 @@ export function SearchForm({ initialState = { results: [] } }: { initialState?: 
 
       {state.sessionId && (
         <section className="card overflow-x-auto">
-          <div className="p-4 flex justify-between items-center">
+          {bulkResult && (
+            <div className="p-4 bg-emerald-50 border-b border-emerald-200 flex flex-wrap items-center justify-between gap-3 text-sm text-emerald-950">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎉</span>
+                <span>
+                  Đã nhập thành công <strong>{bulkResult.imported}</strong> cơ sở vào CRM!
+                  {bulkResult.skipped > 0 && ` (Đã bỏ qua ${bulkResult.skipped} cơ sở đã tồn tại)`}
+                </span>
+              </div>
+              <Link
+                href="/outreach"
+                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg shadow-xs text-xs inline-flex items-center gap-1.5 transition"
+              >
+                <span>💬</span>
+                <span>Mở Hàng Đợi Gửi Zalo Ngay →</span>
+              </Link>
+            </div>
+          )}
+
+          <div className="p-4 flex justify-between items-center border-b border-slate-100">
             <h2 className="font-bold">
               Kết quả ({state.results.length})
               {state.mode === "FIND_NEW" && (
@@ -199,15 +265,62 @@ export function SearchForm({ initialState = { results: [] } }: { initialState?: 
                 </span>
               )}
             </h2>
-            <span className="text-xs text-[#5e5e5e]" translate="no">
-              Google Maps
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[#5e5e5e]" translate="no">
+                Google Maps
+              </span>
+            </div>
           </div>
+
+          {state.results.length > 0 && (
+            <div className="px-4 py-2.5 bg-slate-50/80 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-700">
+                  Đã chọn: <strong className="text-blue-700 font-bold">{selectedIds.size}</strong> / {state.results.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={selectAll}
+                  className="px-2 py-1 bg-white border border-slate-300 rounded hover:bg-slate-100 transition"
+                >
+                  {selectedIds.size === state.results.length ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                </button>
+                <button
+                  type="button"
+                  onClick={selectOnlyNew}
+                  className="px-2 py-1 bg-white border border-emerald-300 text-emerald-800 font-medium rounded hover:bg-emerald-50 transition"
+                >
+                  Chỉ chọn cơ sở mới
+                </button>
+              </div>
+
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={handleBulkImport}
+                  disabled={isBulkPending}
+                  className="px-3.5 py-1.5 bg-[#17324d] text-white font-semibold rounded-lg shadow-sm hover:bg-[#102438] transition disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <span>⚡</span>
+                  <span>{isBulkPending ? "Đang nhập CRM..." : `Nhập ${selectedIds.size} cơ sở đã chọn vào CRM`}</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {state.results.length ? (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-slate-500">
                 <tr>
+                  <th className="p-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label="Chọn tất cả"
+                      checked={state.results.length > 0 && selectedIds.size === state.results.length}
+                      onChange={selectAll}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </th>
                   {["Tên doanh nghiệp", "Trạng thái", "Địa chỉ", "Loại hình", "Website", "Nguồn", "Thao tác"].map(
                     (t) => (
                       <th className="p-3 font-semibold" key={t}>
@@ -219,7 +332,19 @@ export function SearchForm({ initialState = { results: [] } }: { initialState?: 
               </thead>
               <tbody className="divide-y">
                 {state.results.map((result) => (
-                  <tr key={result.externalId} className="hover:bg-slate-50/50">
+                  <tr
+                    key={result.externalId}
+                    className={`hover:bg-slate-50/50 transition ${selectedIds.has(result.externalId) ? "bg-blue-50/40" : ""}`}
+                  >
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label={`Chọn ${result.name}`}
+                        checked={selectedIds.has(result.externalId)}
+                        onChange={() => toggleSelect(result.externalId)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="p-3">
                       <div className="font-semibold text-slate-900">{result.name}</div>
                     </td>

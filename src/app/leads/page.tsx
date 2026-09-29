@@ -7,6 +7,7 @@ import { generateOpportunities } from "../../features/opportunities/engine";
 import { calculatePriorityScore, sortByPriority } from "../../features/priority-score/score";
 import type { PriorityBand } from "../../features/priority-score/types";
 import type { AuditChecks, AuditFinding } from "../../features/website-audit/types";
+import { classifyPhoneNumber } from "../../lib/phone";
 
 const priorityBands: PriorityBand[] = ["HOT", "WARM", "LOW"];
 
@@ -97,19 +98,48 @@ export default async function Leads({ searchParams }: { searchParams: Promise<{ 
                 <td className="p-4">{lead.opportunityCount} cơ hội</td>
                 <td className="p-4">{lead.tasks[0]?.dueAt.toLocaleDateString("vi-VN") || "—"}</td>
                 <td className="p-4 whitespace-nowrap">
-                  {lead.phone ? (
-                    <a
-                      href={`https://zalo.me/${lead.phone.replace(/[^+\d]/g, "")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-2.5 py-1 bg-[#0068ff] hover:bg-[#0052cc] text-white rounded-md text-xs font-semibold inline-flex items-center gap-1 shadow-2xs transition"
-                    >
-                      <span>💬</span>
-                      <span>Zalo</span>
-                    </a>
-                  ) : (
-                    <span className="text-slate-400 text-xs">Chưa có SĐT</span>
-                  )}
+                  {(() => {
+                    const phoneInfo = classifyPhoneNumber(lead.phone);
+                    if (phoneInfo.type === "MOBILE") {
+                      return (
+                        <a
+                          href={`https://zalo.me/${phoneInfo.normalized}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`Di động (${lead.phone}) - Bấm để chat Zalo`}
+                          className="px-2.5 py-1 bg-[#0068ff] hover:bg-[#0052cc] text-white rounded-md text-xs font-semibold inline-flex items-center gap-1 shadow-2xs transition"
+                        >
+                          <span>💬</span>
+                          <span>Zalo</span>
+                        </a>
+                      );
+                    }
+                    if (phoneInfo.type === "LANDLINE") {
+                      return (
+                        <a
+                          href={`tel:${phoneInfo.normalized}`}
+                          title={`Máy bàn (${phoneInfo.provinceName}) - Bấm để gọi lễ tân`}
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-md text-xs font-semibold inline-flex items-center gap-1 transition shadow-2xs"
+                        >
+                          <span>☎️</span>
+                          <span>Bàn ({phoneInfo.provinceName || "Gọi"})</span>
+                        </a>
+                      );
+                    }
+                    if (phoneInfo.type === "HOTLINE") {
+                      return (
+                        <a
+                          href={`tel:${phoneInfo.normalized}`}
+                          title="Tổng đài - Bấm để gọi"
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-md text-xs font-medium inline-flex items-center gap-1 transition"
+                        >
+                          <span>📞</span>
+                          <span>Hotline</span>
+                        </a>
+                      );
+                    }
+                    return <span className="text-slate-400 text-xs">Chưa có SĐT</span>;
+                  })()}
                 </td>
               </tr>
             ))}

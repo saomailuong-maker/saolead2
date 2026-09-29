@@ -189,6 +189,7 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
       );
 
       console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", mode: "find_new", workspace_id: actor.workspaceId, result_count: findResult.newPlaces.length, stats: findResult.stats, status: "ok" }));
+      revalidatePath("/discover");
       return {
         sessionId: session.id,
         location: parsed.data.location,
@@ -235,6 +236,7 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
     const enrichedResults = await resolvePlacesStatus(actor.workspaceId, results);
 
     console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", mode: "standard", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
+    revalidatePath("/discover");
     return {
       sessionId: session.id,
       location: parsed.data.location,

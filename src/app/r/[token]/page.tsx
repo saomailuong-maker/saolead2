@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const defaultMetadata: Metadata = {
-  title: "Bản Thẩm định Hiện diện Số | Sao Béo",
-  description: "Bản phân tích cơ hội tiếp cận khách du lịch và giải pháp chốt khách trực tiếp.",
+  title: "Bản Thẩm định Marketing & Hiện diện Số | 3DUA Media",
+  description: "Bản phân tích giải pháp Marketing toàn diện & tăng trưởng doanh số thực chiến.",
   robots: { index: false, follow: false, nocache: true },
 };
 
@@ -24,8 +24,8 @@ export async function generateMetadata({
     const access = await getPublicReport(token);
     if (access.kind === "ACTIVE") {
       const name = access.snapshot.business.name;
-      const title = `Bản Thẩm định Hiện diện Số — ${name}`;
-      const description = `Bản phân tích cơ hội tiếp cận khách du lịch và giải pháp chốt khách trực tiếp 1-chạm dành riêng cho ${name}.`;
+      const title = `Bản Thẩm định Marketing & Hiện diện Số — ${name}`;
+      const description = `Bản phân tích giải pháp Marketing toàn diện & chốt khách trực tiếp 1-chạm dành riêng cho ${name}.`;
       return {
         title,
         description,
@@ -69,7 +69,7 @@ export default async function PublicAuditReportPage({
     return (
       <main className="mx-auto min-h-screen max-w-3xl px-5 py-20">
         <div className="rounded-3xl border bg-white p-8 text-center shadow-sm">
-          <div className="font-bold tracking-[.2em] text-[#8a5b35]">SAO BÉO</div>
+          <div className="font-bold tracking-[.2em] text-[#8a5b35]">3DUA MEDIA</div>
           <h1 className="mt-8 text-2xl font-bold">
             {access.kind === "REVOKED"
               ? "Báo cáo này không còn khả dụng."

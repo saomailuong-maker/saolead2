@@ -35,4 +35,12 @@ describe("Discover page", () => {
     expect(html).toContain("Đà Lạt · Homestay");
     expect(html).toContain("Tìm thêm khách mới");
   });
+
+  it("restores session and marks active session in search history", async () => {
+    const page = await Discover({ searchParams: Promise.resolve({ session: "s-1" }) });
+    const html = renderToStaticMarkup(page);
+
+    expect(html).toContain("Đang mở");
+    expect(html).toContain("Đang xem");
+  });
 });

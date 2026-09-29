@@ -26,7 +26,7 @@ export default async function Discover({
 
       <SearchHistory sessions={historySessions} currentSessionId={session} />
 
-      <SearchForm initialState={initialState} />
+      <SearchForm key={session ?? "new"} initialState={initialState} />
     </div>
   );
 }

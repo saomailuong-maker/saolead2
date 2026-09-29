@@ -445,13 +445,13 @@ export function buildReportNarrative(report: PublicAuditSnapshot): ReportNarrati
   const costOfInaction = buildCostOfInaction(category, lodgingSegment);
 
   const brandPhone = process.env.PUBLIC_CONTACT_TEXT || "0900000000";
-  const messageText = `Chào Sao Béo, mình vừa xem bản phân tích hiện diện số của ${report.business.name}. Mình muốn trao đổi thêm về phương án website minh họa.`;
+  const messageText = `Chào 3DUA Media, mình vừa xem bản thẩm định marketing & hiện diện số của ${report.business.name}. Mình muốn trao đổi thêm về kế hoạch marketing toàn diện và phương án tăng trưởng cho cơ sở.`;
   const zaloHref = `https://zalo.me/${brandPhone.replace(/[^+\d]/g, "")}?text=${encodeURIComponent(messageText)}`;
 
   return {
     industry: category,
     lodgingSegment,
-    businessContext: `${report.business.name} là ${industryLabel}${location}. Báo cáo này sử dụng các tín hiệu đã ghi nhận để đề xuất một bước tiếp theo vừa đủ.`,
+    businessContext: `${report.business.name} là ${industryLabel}${location}. Báo cáo này do 3DUA Media thực hiện nhằm thẩm định hiện diện số và đề xuất giải pháp marketing toàn diện tăng trưởng doanh thu thực chiến.`,
     headline: social
       ? `${report.business.name} đã có điểm chạm online; cơ hội nằm ở việc kết nối chúng thành một hành trình rõ hơn.`
       : `${report.business.name} đã có website; cơ hội nằm ở việc giúp khách hiểu và hành động thuận tiện hơn.`,
@@ -469,12 +469,12 @@ export function buildReportNarrative(report: PublicAuditSnapshot): ReportNarrati
     costOfInaction,
     zaloConsultation: {
       brandPhone,
-      brandName: process.env.PUBLIC_BRAND_NAME || "Sao Béo",
+      brandName: process.env.PUBLIC_BRAND_NAME || "3DUA Media",
       messageText,
       zaloHref,
     },
-    primaryCTA: social ? `Xem phương án website minh họa cho ${report.business.name}` : "Xem phương án tối ưu trang hiện tại",
-    secondaryCTA: "Trao đổi nhanh qua Zalo để xem thử giao diện",
+    primaryCTA: social ? `Xem kế hoạch marketing & giao diện demo cho ${report.business.name}` : "Xem phương án tối ưu marketing & chuyển đổi số",
+    secondaryCTA: "Kết nối chuyên viên 3DUA Media qua Zalo",
   };
 }
 

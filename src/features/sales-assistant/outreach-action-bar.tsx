@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { recordOutreachSent } from "./actions";
 import { detectLodgingSegment } from "../public-audit/presentation";
+import { classifyPhoneNumber } from "../../lib/phone";
 
 export function OutreachActionBar({
   lead,
@@ -31,9 +32,10 @@ export function OutreachActionBar({
   const reportUrl = publicReportToken ? `${baseUrl}/r/${publicReportToken}` : "";
   const demoUrl = demoSlug ? `${baseUrl}/demo/${demoSlug}` : "";
 
-  const cleanPhone = (lead.phone || "").replace(/[^+\d]/g, "");
+  const phoneInfo = classifyPhoneNumber(lead.phone);
+  const cleanPhone = phoneInfo.normalized;
 
-  const friendRequestNote = `Dạ em chào ${lead.businessName}, em Sao bên giải pháp số, em gửi tặng cơ sở bản thẩm định kênh online trong tin nhắn Zalo nhé!`;
+  const friendRequestNote = `Dạ em chào ${lead.businessName}, em bên 3DUA Media - Giải pháp Marketing Toàn diện & Tăng trưởng Số, em gửi tặng cơ sở bản thẩm định marketing đa kênh trong tin nhắn Zalo nhé!`;
 
   const buildMessage = () => {
     const isLodging = /hotel|homestay|khách sạn|nhà nghỉ|resort|lưu trú/i.test(lead.industry || "");
@@ -51,56 +53,54 @@ Bên mình có đang nhận tư vấn dịch vụ trực tiếp qua Zalo này kh
     }
 
     if (style === "NATURAL") {
-      return `Em chào anh/chị, em có xem qua kênh online của ${lead.businessName} trên Google Maps thấy bên mình làm hình ảnh và đánh giá rất tốt.
+      return `Em chào anh/chị, em bên 3DUA Media, em có xem qua kênh online của ${lead.businessName} trên Google Maps thấy bên mình làm hình ảnh và đánh giá rất tốt.
 
-Em có chuẩn bị 1 bản thẩm định nhanh về cơ hội tiếp cận khách du lịch và chốt khách trực tiếp cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Kèm bản thử giao diện: ${demoUrl})` : ""}.
+Em có chuẩn bị 1 bản thẩm định nhanh về cơ hội tiếp cận khách hàng đa kênh (từ sản xuất media, tối ưu Google Maps đến chốt khách trực tiếp) cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Kèm bản thử giao diện: ${demoUrl})` : ""}.
 
 Anh/chị xem qua xem có hữu ích cho mình không nhé!`;
     }
 
     if (style === "VALUE") {
       if (lodgingSegment === "HOMESTAY") {
-        return `Chào anh/chị ${lead.businessName}, em thấy bên mình làm homestay rất có gu và khách đánh giá cao.
+        return `Chào anh/chị ${lead.businessName}, em bên 3DUA Media, em thấy bên mình làm homestay rất có gu và khách đánh giá cao.
 
-Tuy nhiên việc mỗi ngày phải trả lời lặp đi lặp lại hàng chục tin nhắn trong inbox Facebook/Zalo rồi khách 'seen không rep' hoặc khách tìm thấy trên Google Maps mà không thấy bảng giá ngay thì khá phí.
+Bên em cung cấp giải pháp Marketing toàn diện cho homestay: quay chụp media view phòng đẹp, tối ưu vị trí hiển thị trên Google Maps và trang bio chốt cọc Zalo 1-chạm giúp giảm 80% thời gian trả lời tin nhắn lặp lại và không bị mất 15-20% phí hoa hồng sàn OTA.
 
-Em có gửi anh/chị bản phân tích giải pháp trang đích bio xem ảnh phòng 360° & cọc Zalo 1-chạm${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản xem thử: ${demoUrl})` : ""}.
+Em có gửi anh/chị bản phân tích giải pháp marketing & trang đích demo cho cơ sở${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản xem thử: ${demoUrl})` : ""}.
 
-Anh/chị xem qua để tối ưu thời gian trực chat nhé!`;
+Anh/chị xem qua nhé!`;
       }
 
       if (lodgingSegment === "HOTEL") {
-        return `Chào anh/chị ${lead.businessName}, em thấy khách sạn mình đang đón khách trên Google Maps rất đều.
+        return `Chào anh/chị ${lead.businessName}, em bên 3DUA Media, em thấy khách sạn mình đang đón khách trên Google Maps rất đều.
 
-Tuy nhiên việc chi trả 15% – 22% phí hoa hồng cho các sàn OTA (Booking/Agoda) mỗi tháng làm hao hụt đáng kể lợi nhuận từ tệp khách hàng quen thuộc.
+Bên em cung cấp giải pháp Marketing số toàn diện cho khách sạn: tối ưu Local SEO Google Maps top tìm kiếm, quảng cáo đa kênh mùa du lịch và hệ thống Direct Booking trực tiếp giúp tiết kiệm 15% – 22% phí hoa hồng OTA mỗi tháng, giữ trọn 100% doanh thu.
 
-Em có gửi anh/chị bản phân tích giải pháp Direct Booking trực tiếp giúp giữ trọn 100% doanh thu và hỗ trợ xuất hóa đơn VAT${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
+Em có gửi anh/chị bản phân tích giải pháp marketing & demo direct booking cho khách sạn${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
 
 Nếu tiện mình cùng trao đổi nhé!`;
       }
 
       if (lodgingSegment === "VILLA") {
-        return `Chào anh/chị ${lead.businessName}, em thấy căn villa của mình rất đẹp và phù hợp cho khách đoàn nghỉ dưỡng.
+        return `Chào anh/chị ${lead.businessName}, em bên 3DUA Media, em thấy căn villa của mình rất đẹp và phù hợp cho khách đoàn nghỉ dưỡng.
 
-Tuy nhiên các deal villa giá trị cao thì người đại diện đoàn thường khó chốt vì gửi thông tin phòng và tiện ích BBQ qua tin nhắn bị rời rạc, các thành viên khác dễ bàn lùi.
+Bên em cung cấp giải pháp Marketing trọn gói cho villa: sản xuất video ngắn TikTok/Reels viral không gian sân vườn BBQ, chạy ads nhắm tệp khách đoàn du lịch, và trang giới thiệu tổng thể 1 link để cả đoàn cùng duyệt và chốt cọc trong 15 phút.
 
-Em có gửi anh/chị bản phân tích giải pháp gửi 1 link tổng thể để cả đoàn cùng xem và chốt cọc trong 15 phút${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
+Em có gửi anh/chị bản phân tích giải pháp & trang thử demo cho căn villa${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
 
 Anh/chị xem qua nhé!`;
       }
 
       return isLodging
-        ? `Chào anh/chị ${lead.businessName}, em thấy bên mình đang có lượng khách tìm hiểu trên Maps rất đều.
-
-Em có gửi anh/chị bản phân tích giải pháp đặt phòng 1 chạm trực tiếp${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử: ${demoUrl})` : ""}.
+        ? `Chào anh/chị ${lead.businessName}, em bên 3DUA Media gửi anh/chị bản phân tích giải pháp Marketing & đặt phòng 1 chạm trực tiếp cho cơ sở${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử: ${demoUrl})` : ""}.
 
 Nếu thấy tiện mình cùng trao đổi nhé!`
-        : `Chào anh/chị, em gửi anh/chị bản phân tích cơ hội tối ưu hiện diện số và tiếp cận khách hàng địa phương cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
+        : `Chào anh/chị, em bên 3DUA Media gửi anh/chị bản phân tích giải pháp Marketing toàn diện (sản xuất media review, tối ưu Google Maps và trang giới thiệu dịch vụ 1 chạm) cho ${lead.businessName}${reportUrl ? `: ${reportUrl}` : ""}${demoUrl ? `\n(Bản thử demo: ${demoUrl})` : ""}.
 
-Anh/chị xem qua để nắm các điểm có thể tối ưu chuyển đổi ngay nhé!`;
+Anh/chị xem qua để nắm các cơ hội tăng trưởng doanh thu ngay nhé!`;
     }
 
-    return `Em chào anh/chị, bên em vừa dựng thử 1 bản demo giao diện xem thông tin & liên hệ 1 chạm cho ${lead.businessName}${demoUrl ? `: ${demoUrl}` : ""}${reportUrl ? `\n(Kèm báo cáo: ${reportUrl})` : ""}.
+    return `Em chào anh/chị, bên em (3DUA Media) vừa dựng thử 1 bản demo giải pháp trải nghiệm số & liên hệ chốt khách 1 chạm cho ${lead.businessName}${demoUrl ? `: ${demoUrl}` : ""}${reportUrl ? `\n(Kèm báo cáo: ${reportUrl})` : ""}.
 
 Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé, nếu hướng này phù hợp em sẽ hỗ trợ cập nhật thêm!`;
   };
@@ -139,6 +139,12 @@ Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé,
   const handleZalo = () => {
     if (!cleanPhone) {
       alert("Lead này chưa có số điện thoại. Vui lòng cập nhật số điện thoại trước.");
+      return;
+    }
+    if (!phoneInfo.isZaloSupported) {
+      alert(
+        `Số điện thoại ${lead.phone} là ${phoneInfo.label}, không hỗ trợ Zalo cá nhân. Hãy dùng nút 'Gọi điện' để liên hệ lễ tân và xin số Zalo của Quản lý / Chủ cơ sở!`
+      );
       return;
     }
     const zaloUrl = `https://zalo.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
@@ -247,7 +253,7 @@ Anh/chị mở trên điện thoại xem thử trải nghiệm thực tế nhé,
             onClick={() => handleAction("CALL")}
             className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 inline-flex items-center gap-1.5"
           >
-            <span>📞</span> Gọi hotline
+            <span>📞</span> {phoneInfo.type === "LANDLINE" ? `Gọi Lễ tân (${phoneInfo.provinceName || "Máy bàn"})` : "Gọi hotline"}
           </a>
         )}
 

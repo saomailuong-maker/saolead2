@@ -89,7 +89,7 @@ export function PublicAuditReportView({
         <div className="relative z-10 max-w-4xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-amber-400/20 px-3.5 py-1 text-xs font-bold tracking-widest text-[#fbd7a9] border border-amber-400/30">
-              SAO BÉO · BẢN THẨM ĐỊNH HIỆN DIỆN SỐ
+              3DUA MEDIA · BẢN THẨM ĐỊNH MARKETING & HIỆN DIỆN SỐ
             </span>
             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-300 border border-white/15">
               Dành riêng cho chủ cơ sở
@@ -781,8 +781,8 @@ export function PublicAuditReportView({
 
       {/* Footer */}
       <footer className="py-12 text-center text-xs text-slate-500">
-        <p className="font-semibold text-slate-600">Báo cáo Thẩm định Hiện diện Số được thực hiện bởi Sao Béo</p>
-        <p className="mt-1">Dành riêng cho {report.business.name} · Ngày tạo: {new Date(report.generatedAt).toLocaleDateString("vi-VN")}</p>
+        <p className="font-semibold text-slate-600">Báo cáo Thẩm định Marketing & Hiện diện Số được thực hiện bởi 3DUA Media (3duamedia.com)</p>
+        <p className="mt-1">Dành riêng cho {report.business.name} · Mã kiểm định: #{token.slice(0, 8)} · Ngày tạo: {new Date(report.generatedAt).toLocaleDateString("vi-VN")}</p>
       </footer>
 
       {/* Mobile Sticky CTA Bar */}

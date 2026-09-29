@@ -20,6 +20,15 @@ describe("hook-templates", () => {
     const msg = HOOK_TEMPLATES.HOTEL_MAPS.build({ businessName: "Khách Sạn Mai Vàng", location: "Đà Lạt" });
     expect(msg).toContain("Khách Sạn Mai Vàng");
     expect(msg).toContain("Đà Lạt");
-    expect(msg).toContain("Top 3 Google Maps");
+    expect(msg).toContain("tối ưu vị trí hiển thị khi khách tìm kiếm trên Google");
+    expect(msg).toContain("landing page");
+  });
+
+  it("builds 3DUA Media comprehensive marketing hook message", () => {
+    const msg = HOOK_TEMPLATES.COMPREHENSIVE_MARKETING.build({ businessName: "Tiệm Cà Phê Mây", location: "Đà Lạt" });
+    expect(msg).toContain("3DUA Media");
+    expect(msg).toContain("Tiệm Cà Phê Mây");
+    expect(msg).toContain("Đà Lạt");
+    expect(msg).toContain("Marketing toàn diện");
   });
 });

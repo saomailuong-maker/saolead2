@@ -57,10 +57,12 @@ export function SearchForm({ initialState = { results: [] } }: { initialState?: 
     }
   }, [state.sessionId]);
 
-  useEffect(() => {
+  const [prevSessionId, setPrevSessionId] = useState(state.sessionId);
+  if (state.sessionId !== prevSessionId) {
+    setPrevSessionId(state.sessionId);
     setSelectedIds(new Set());
     setBulkResult(null);
-  }, [state.sessionId]);
+  }
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {

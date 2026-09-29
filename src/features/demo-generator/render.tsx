@@ -1159,18 +1159,18 @@ export function DemoRenderer({
       <footer id="demo-contact" className={`${t.hero} text-center relative overflow-hidden ${isMobileFrame ? "px-4 py-12" : "px-5 py-20"}`}>
         <div className="relative z-10 max-w-2xl mx-auto">
           <span className="inline-flex rounded-full bg-white/10 px-3.5 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-300 border border-white/15 backdrop-blur">
-            Bản Demo Thử Nghiệm Từ Sao Béo
+            Bản Demo Trải Nghiệm Số Từ 3DUA Media
           </span>
           <h2 className={`mt-4 font-extrabold tracking-tight ${isMobileFrame ? "text-xl" : "text-2xl md:text-4xl"}`}>
-            Nếu hướng giao diện này phù hợp, mình cùng hoàn thiện website thật cho {brief.brand.businessName}
+            Nếu hướng giao diện này phù hợp, 3DUA Media sẽ cùng hoàn thiện hệ thống tiếp thị & đặt lịch thật cho {brief.brand.businessName}
           </h2>
           <p className="mt-3 text-xs md:text-sm text-slate-300 leading-relaxed">
-            Hệ thống landing page tốc độ cao, tích hợp đặt phòng Zalo 1-chạm, chuẩn SEO Google Maps và không tốn chi phí duy trì hàng tháng đắt đỏ.
+            Hệ thống tiếp thị số toàn diện: sản xuất media view đẹp, tích hợp đặt lịch/chốt cọc Zalo 1-chạm, chuẩn SEO Google Maps và chạy quảng cáo đón khách hiệu quả.
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <a
-              href={`https://zalo.me/${process.env.PUBLIC_CONSULTANT_PHONE || "0900000000"}?text=${encodeURIComponent(`Chào bạn, mình vừa xem bản demo website cho ${brief.brand.businessName} thấy rất ưng. Nhờ bạn tư vấn hoàn thiện giúp mình nhé!`)}`}
+              href={`https://zalo.me/${process.env.PUBLIC_CONSULTANT_PHONE || "0900000000"}?text=${encodeURIComponent(`Chào 3DUA Media, mình vừa xem bản demo trải nghiệm cho ${brief.brand.businessName} thấy rất ưng. Nhờ bên bạn tư vấn giải pháp marketing toàn diện giúp mình nhé!`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className={`rounded-full bg-[#0068ff] font-bold text-white shadow-xl transition hover:bg-[#0054d1] inline-flex items-center justify-center gap-2 ${isMobileFrame ? "w-full py-3 text-xs" : "px-8 py-4 text-sm"}`}

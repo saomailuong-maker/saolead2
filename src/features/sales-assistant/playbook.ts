@@ -13,7 +13,7 @@ export const objectionPlaybook: Record<ObjectionKey, ObjectionRule> = {
 
 export const accommodationChannelRule = "Facebook/TikTok hỗ trợ khám phá, nội dung và hội thoại; Google Maps hỗ trợ tìm kiếm địa phương, đánh giá, gọi và chỉ đường; OTA hỗ trợ phân phối, so sánh và nhu cầu đặt phòng; website là điểm đến sở hữu cho thông tin sâu hơn, CTA trực tiếp và đo lường.";
 export const outreachStyleRules = [
-  "Mở đầu như một người làm dịch vụ địa phương: chào tự nhiên, nêu một quan sát cụ thể, đưa giả thuyết giá trị ngắn, nói rõ Sao Béo làm gì và kết bằng lời mời ít áp lực để gửi audit/demo/mockup.",
+  "Mở đầu như một người làm dịch vụ địa phương: chào tự nhiên, nêu một quan sát cụ thể, đưa giả thuyết giá trị ngắn, nói rõ 3DUA Media làm gì (giải pháp Marketing toàn diện, tối ưu kênh online) và kết bằng lời mời ít áp lực để gửi thẩm định/demo/mockup.",
   "Không giải thích chiến lược hoặc thuật ngữ hệ thống trước khi tạo một cuộc trò chuyện tự nhiên.",
   "Tin nhắn đầu chỉ có tối đa một câu hỏi đơn giản; các câu hỏi khám phá chi tiết để sau khi khách phản hồi.",
   "Website bổ trợ Facebook, Google Maps và OTA; không định vị là kênh thay thế.",

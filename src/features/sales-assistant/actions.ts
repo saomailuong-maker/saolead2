@@ -101,3 +101,12 @@ export async function recordOutreachSent(data: {
   return { success: true };
 }
 
+export async function updateLeadPhone(data: { leadId: string; phone: string }) {
+  const actor = await requireActor();
+  await db.lead.updateMany({
+    where: { id: data.leadId, workspaceId: actor.workspaceId },
+    data: { phone: data.phone.trim() },
+  });
+  return { success: true };
+}
+

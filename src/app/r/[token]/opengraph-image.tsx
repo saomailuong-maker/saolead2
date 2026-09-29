@@ -3,7 +3,7 @@ import { getPublicReport } from "../../../features/public-audit/repository";
 import { classifyReportIndustry } from "../../../features/public-audit/presentation";
 
 export const runtime = "nodejs";
-export const alt = "Bản phân tích hiện diện online | Sao Béo";
+export const alt = "Bản thẩm định marketing & hiện diện online | 3DUA Media";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -58,10 +58,10 @@ export default async function Image({ params }: { params: Promise<{ token: strin
                 color: "#ffffff",
               }}
             >
-              SB
+              3D
             </div>
             <div style={{ fontSize: "22px", fontWeight: "bold", letterSpacing: "2px", color: "#f4c58b" }}>
-              SAO BÉO DIGITAL
+              3DUA MEDIA
             </div>
           </div>
           <div

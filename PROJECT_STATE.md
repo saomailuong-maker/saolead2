@@ -82,15 +82,20 @@ Phase 3 — Discovery Infrastructure Hardening. Task H3 Discovery History & Find
 - Task H3: DiscoverySeenPlace and SearchSession migration applied; typecheck PASS; lint PASS; tests PASS (189); build PASS; migration status PASS; diff check PASS.
 - Task H4: typecheck PASS; lint PASS; tests PASS (195/195 on 41 files); Turbopack build PASS; dev server running on port 3001.
 - Task H4.1 (Lodging Segments Realism): typecheck PASS; lint PASS; tests PASS (197/197 on 41 files); Next.js build PASS; segment differentiation (Homestay vs Hotel vs Villa) fully verified.
+- Task H4.3 (Discovery History Session Key Fix & 3DUA Media Comprehensive Marketing Transition):
+  - Fixed Discover session restore without F5 via `<SearchForm key={session ?? "new"} />` remount and `revalidatePath("/discover")`.
+  - Resolved `react-hooks/set-state-in-effect` lint errors with render-time state adjustment.
+  - Upgraded agency positioning to 3DUA Media (3duamedia.com) Growth Marketing Agency across Zalo 1-Click hook templates, 1-Click Action Bar, Public Audit Report & OpenGraph images, and AI assistant prompts.
+  - Typecheck PASS (0 errors); Lint PASS (0 errors, 0 warnings); Tests PASS (211/211 on 43 files); Turbopack build PASS.
 
 ## Last Completed Task
-Task H4.1 — Lodging Segments Realism (Homestay vs Hotel vs Villa Personalization in Public Audit & Demo, Segment-Tailored Outreach Pitch).
+Task H4.3 — Discovery History Session Key Fix & 3DUA Media Comprehensive Marketing Transition.
 
 ## Current Task
-Task H4.1 code complete. Ready for manual acceptance on http://localhost:3001.
+Task H4.3 code complete. Ready for production deployment on Vercel.
 
 ## Next Task
-Manual acceptance for Task H4.1.
+Production deployment verification on saobeo.com.
 
 ## Important Decisions
 - Google API key remains server-only.

@@ -44,40 +44,42 @@ export async function recordSeenPlaces(
   const seenCountMap = new Map<string, number>();
   const now = new Date();
 
-  for (const place of places) {
-    const prev = existingMap.get(place.externalId);
-    if (prev) {
-      const newCount = prev.seenCount + 1;
-      seenCountMap.set(place.externalId, newCount);
-      await db.discoverySeenPlace.update({
-        where: { id: prev.id },
-        data: {
-          seenCount: newCount,
-          lastSeenAt: now,
-          name: place.name || prev.name,
-          address: place.address || prev.address,
-          lastSearchSessionId: sessionId || prev.lastSearchSessionId,
-        },
-      });
-    } else {
-      seenCountMap.set(place.externalId, 1);
-      await db.discoverySeenPlace.create({
-        data: {
-          workspaceId,
-          provider: "google_places",
-          externalId: place.externalId,
-          name: place.name,
-          address: place.address,
-          location,
-          industry,
-          seenCount: 1,
-          firstSeenAt: now,
-          lastSeenAt: now,
-          lastSearchSessionId: sessionId,
-        },
-      });
-    }
-  }
+  await Promise.all(
+    places.map(async (place) => {
+      const prev = existingMap.get(place.externalId);
+      if (prev) {
+        const newCount = prev.seenCount + 1;
+        seenCountMap.set(place.externalId, newCount);
+        return db.discoverySeenPlace.update({
+          where: { id: prev.id },
+          data: {
+            seenCount: newCount,
+            lastSeenAt: now,
+            name: place.name || prev.name,
+            address: place.address || prev.address,
+            lastSearchSessionId: sessionId || prev.lastSearchSessionId,
+          },
+        });
+      } else {
+        seenCountMap.set(place.externalId, 1);
+        return db.discoverySeenPlace.create({
+          data: {
+            workspaceId,
+            provider: "google_places",
+            externalId: place.externalId,
+            name: place.name,
+            address: place.address,
+            location,
+            industry,
+            seenCount: 1,
+            firstSeenAt: now,
+            lastSeenAt: now,
+            lastSearchSessionId: sessionId,
+          },
+        });
+      }
+    })
+  );
 
   return seenCountMap;
 }
@@ -85,7 +87,8 @@ export async function recordSeenPlaces(
 export async function resolvePlacesStatus(
   workspaceId: string,
   places: BusinessSearchResult[],
-  knownNewIds?: Set<string>
+  knownNewIds?: Set<string>,
+  providedSeenMap?: Map<string, number>
 ): Promise<EnrichedSearchResult[]> {
   if (places.length === 0) return [];
   const placeIds = places.map((p) => p.externalId);
@@ -110,21 +113,21 @@ export async function resolvePlacesStatus(
           select: { externalId: true, status: true },
         })
       : Promise.resolve([]),
-    db.discoverySeenPlace?.findMany
-      ? db.discoverySeenPlace.findMany({
+    providedSeenMap || !db.discoverySeenPlace?.findMany
+      ? Promise.resolve([])
+      : db.discoverySeenPlace.findMany({
           where: {
             workspaceId,
             provider: "google_places",
             externalId: { in: placeIds },
           },
           select: { externalId: true, seenCount: true },
-        })
-      : Promise.resolve([]),
+        }),
   ]);
 
   const crmSet = new Set(crmLeads.map((l) => l.sourceExternalId).filter(Boolean) as string[]);
   const inboxMap = new Map(inboxItems.map((i) => [i.externalId, i.status]));
-  const seenMap = new Map(seenPlaces.map((s) => [s.externalId, s.seenCount]));
+  const seenMap = providedSeenMap ?? new Map(seenPlaces.map((s) => [s.externalId, s.seenCount]));
 
   return places.map((place) => {
     const id = place.externalId;

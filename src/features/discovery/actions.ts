@@ -98,10 +98,15 @@ export async function restoreSearchSession(sessionId: string): Promise<SearchSta
   if (!session) return { results: [] };
   const parsedResults = z.array(businessSearchResultSchema).safeParse(session.resultsJson);
   if (!parsedResults.success) return { sessionId: session.id, results: [] };
-  const log = await db.providerRequestLog.findFirst({
-    where: { workspaceId: actor.workspaceId, searchSessionId: session.id },
-    orderBy: { createdAt: "desc" },
-  });
+
+  const [log, enrichedResults] = await Promise.all([
+    db.providerRequestLog.findFirst({
+      where: { workspaceId: actor.workspaceId, searchSessionId: session.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    resolvePlacesStatus(actor.workspaceId, parsedResults.data),
+  ]);
+
   const parsedDiagnostics = providerDiagnosticsSchema.safeParse(
     log
       ? {
@@ -117,7 +122,6 @@ export async function restoreSearchSession(sessionId: string): Promise<SearchSta
         }
       : null
   );
-  const enrichedResults = await resolvePlacesStatus(actor.workspaceId, parsedResults.data);
   return {
     sessionId: session.id,
     location: session.location,
@@ -179,13 +183,15 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
         durationMs: null,
         quota: null,
       };
-      await saveProviderLog(actor.workspaceId, diagnostics, session.id);
-
-      await recordSeenPlaces(actor.workspaceId, findResult.newPlaces, parsed.data.location, parsed.data.industry, session.id);
+      const [seenMap] = await Promise.all([
+        recordSeenPlaces(actor.workspaceId, findResult.newPlaces, parsed.data.location, parsed.data.industry, session.id),
+        saveProviderLog(actor.workspaceId, diagnostics, session.id),
+      ]);
       const enrichedResults = await resolvePlacesStatus(
         actor.workspaceId,
         findResult.newPlaces,
-        new Set(findResult.newPlaces.map((p) => p.externalId))
+        new Set(findResult.newPlaces.map((p) => p.externalId)),
+        seenMap
       );
 
       console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", mode: "find_new", workspace_id: actor.workspaceId, result_count: findResult.newPlaces.length, stats: findResult.stats, status: "ok" }));
@@ -230,10 +236,12 @@ export async function searchBusinesses(_previous: SearchState, form: FormData): 
       durationMs: null,
       quota: null,
     };
-    await saveProviderLog(actor.workspaceId, diagnostics, session.id);
 
-    await recordSeenPlaces(actor.workspaceId, results, parsed.data.location, parsed.data.industry, session.id);
-    const enrichedResults = await resolvePlacesStatus(actor.workspaceId, results);
+    const [seenMap] = await Promise.all([
+      recordSeenPlaces(actor.workspaceId, results, parsed.data.location, parsed.data.industry, session.id),
+      saveProviderLog(actor.workspaceId, diagnostics, session.id),
+    ]);
+    const enrichedResults = await resolvePlacesStatus(actor.workspaceId, results, undefined, seenMap);
 
     console.info(JSON.stringify({ event: "provider_request", provider: "google_places", transport: provider.transportName, operation: "text_search", mode: "standard", workspace_id: actor.workspaceId, result_count: results.length, status: "ok" }));
     revalidatePath("/discover");

@@ -16,7 +16,25 @@ export async function createSession(userId: string) {
 export async function getActor() {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
-  const session = await db.session.findUnique({ where: { tokenHash: hash(token) }, include: { user: { include: { memberships: true } } } });
+  const session = await db.session.findUnique({
+    where: { tokenHash: hash(token) },
+    select: {
+      expiresAt: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          memberships: {
+            select: {
+              workspaceId: true,
+              role: true,
+            },
+          },
+        },
+      },
+    },
+  });
   if (!session || session.expiresAt < new Date()) return null;
   const membership = session.user.memberships[0];
   if (!membership) return null;

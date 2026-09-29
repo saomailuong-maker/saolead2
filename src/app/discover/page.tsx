@@ -9,11 +9,11 @@ export default async function Discover({
   searchParams: Promise<{ session?: string }>;
 }) {
   await requireActor();
-  const [{ session }, historySessions] = await Promise.all([
-    searchParams,
+  const { session } = await searchParams;
+  const [historySessions, initialState] = await Promise.all([
     getRecentSearchSessions(10),
+    session ? restoreSearchSession(session) : Promise.resolve({ results: [] }),
   ]);
-  const initialState = session ? await restoreSearchSession(session) : { results: [] };
 
   return (
     <div className="space-y-5">
